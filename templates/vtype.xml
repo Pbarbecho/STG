@@ -1,0 +1,4 @@
+<vehiculos>
+	<vType id="car" speedFactor="normc(1,0.8,0.7,1.2)" maxSpeed="14" vClass="passenger" emissionClass="HBEFA3/LDV_D_EU6" color="yellow"/>
+	
+</vehiculos>

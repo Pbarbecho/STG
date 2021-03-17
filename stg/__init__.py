@@ -1,6 +1,6 @@
 from .cli import cli
-from .od2trips import od2run
+from .od2trips import od2
 
-__all__ = ('SUMO_preprocess','od2run')
+__all__ = ('od2')
 
 name = 'stg'

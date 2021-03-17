@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on Sat Oct 24 14:15:08 2020 by Eclipse SUMO od2trips Version 1.5.0
+-->
+
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/od2tripsConfiguration.xsd">
+
+    <input>
+        
+    </input>
+    <output>
+        <precision value="2"/>
+        <precision.geo value="6"/>
+        <human-readable-time value="false"/>
+        <ignore-vehicle-type value="false"/>
+    </output>
+    <time>
+        <begin value="0"/>
+        <end value="86400"/>
+    </time>
+    <processing>
+        <scale value="1"/>
+	<vtype value="car"/>
+        <spread.uniform value="true"/>
+        <different-source-sink value="true"/>
+        <timeline.day-in-hours value="false"/>
+        <no-step-log value="true"/>
+    </processing>
+    <defaults>
+        <departlane value="free"/>
+        <departspeed value="0"/>
+    </defaults>
+    <report>
+        <verbose value="false"/>
+        <print-options value="false"/>
+        <help value=""/>
+        <version value="false"/>
+        <xml-validation value="auto"/>
+        <xml-validation.net value="never"/>
+        <no-warnings value="true"/>
+        <aggregate-warnings value="-1"/>
+        <ignore-errors value="true"/>
+    </report>
+    <random_number>
+        <random value="false"/>
+    </random_number>
+</configuration>

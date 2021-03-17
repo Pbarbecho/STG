@@ -18,6 +18,13 @@ os.environ['SUMO_HOME']='/opt/sumo-1.8.0'
 
 from stg.utils import SUMO_preprocess, parallel_batch_size, detector_cfg
 
+
+# Informacion de origen / destino como aparece en TAZ file 
+origin_district = ['Hospitalet']
+destination_distric = ['SanAdria']
+factor = 1
+
+"""
 # number of cpus
 processors = multiprocessing.cpu_count() # due to memory lack -> Catalunya  map = 2GB
 
@@ -36,9 +43,7 @@ rr_prob = 0
 # routing dua / ma
 routing = 'od2'
 
-# Informacion de origen / destino como aparece en TAZ file 
-origin_district = ['Hospitalet']
-destination_distric = ['SanAdria']
+
 
  
 # Static paths 
@@ -101,7 +106,7 @@ class folders:
     cpu=cpu
     mem=mem
     disk=disk
-  
+"""
     
 def clean_folder(folder):
     files = glob.glob(os.path.join(folder,'*'))
@@ -132,27 +137,31 @@ def gen_routes(O, k, O_files):
     return od2_sim_cfg_file
         
         
-def gen_route_files():
+def gen_route_files(folders, k, repetitions, end_hour):
     # generate cfg files
     for h in origin_district:
         print(f'\nGenerating cfg files for TAZ: {h}')
         for sd in tqdm(destination_distric):
             # build O file    
             O_name = os.path.join(folders.O, f'{h}_{sd}')
-            create_O_file(O_name, f'{h}', f'{sd}')
+            create_O_file(folders, O_name, f'{h}', f'{sd}', end_hour)
+            
+            """
             # Generate cfg files 
-            for k in range(n_repetitions):
+            for k in range(repetitions):
                 # backup O files
                 O_files = os.listdir(folders.O)
                 # Gen Od2trips/MArouter
                 od2_sim_cfg_file = gen_routes(O_name, k, O_files)
-    return od2_sim_cfg_file
+            """
+    #return od2_sim_cfg_file
+    return 'a'
 
     
 
-def create_O_file(fname, origin_district, destination_distric):
+def create_O_file(folders, fname, origin_district, destination_distric, end_hour):
     #create 24 hour files
-    traffic = pd.read_csv('/root/Desktop/MSWIM/Revista/TrafficPgSanJoan.csv')
+    traffic = pd.read_csv(folders.realtraffic)
  
     df = pd.DataFrame(traffic)
     #traffic_24 = traffic_df['Total'].values
@@ -488,13 +497,13 @@ def print_time(process_name):
     now = datetime.now()
     current_time = now.strftime("%H:%M:%S")
     print(f"\n{process_name} Time =", current_time)
-      
-def od2run(config):
+    
+    
+def od2(config,sim_time,repetitions, end_hour):
+    od2_sim_cfg_file = gen_route_files(config, 0, repetitions, end_hour)
     
     
     
-    new_dir = os.path.join(base_dir, f'{k}_{rr_prob}')
-    print(config.SUMO_exec)
     
     """
     class options:
@@ -508,7 +517,6 @@ def od2run(config):
 
 # Generate cfg files        
 
-od2run(config)
 #od2_sim_cfg_file = gen_route_files()
 
 # Execute simulations

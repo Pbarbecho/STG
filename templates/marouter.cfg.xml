@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on Sun Dec 27 11:16:34 2020 by Eclipse SUMO marouter Version 1.5.0
+-->
+
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/marouterConfiguration.xsd">
+    <input>
+        <net-file value="/root/Desktop/MSWIM/Revista/sim_files/templates/osm.net.xml"/>
+	<taz-param value = "Hospitalet, SanAdria"/>
+    </input>
+    <output>
+        <precision value="2" type="INT" help="Defines the number of digits after the comma for floating point output"/>
+        <precision.geo value="6" type="INT" help="Defines the number of digits after the comma for lon,lat output"/>
+        <human-readable-time value="false" synonymes="H" type="BOOL" help="Write time values as hour:minute:second or day:hour:minute:second rathern than seconds"/>
+    </output>
+    <processing>
+	<vtype value="car"/>	
+	<assignment-method value="incremental"/>	
+	<route-choice-method value="logit"/>        
+	<aggregation-interval value="86400" type="TIME" help="Defines the time interval when aggregating single vehicle input; Defaults to one hour"/>
+        <max-alternatives value="20" type="INT" help="Prune the number of alternatives to INT"/>
+        <weights.interpolate value="false" synonymes="interpolate" type="BOOL" help="Interpolate edge weights at interval boundaries"/>
+        <weights.expand value="false" synonymes="expand-weights" type="BOOL" help="Expand weights behind the simulation&apos;s end"/>
+        <routing-algorithm value="dijkstra" type="STR" help="Select among routing algorithms [&apos;dijkstra&apos;, &apos;astar&apos;, &apos;CH&apos;, &apos;CHWrapper&apos;]"/>
+        <bulk-routing.vtypes value="false" type="BOOL" help="Aggregate routing queries with the same origin for different vehicle types"/>
+        <routing-threads value="20" type="INT" help="The number of parallel execution threads used for routing"/>
+        <weight-period value="86400" type="TIME" help="Aggregation period for the given weight files; triggers rebuilding of Contraction Hierarchy"/>
+        <scale value="1.0" synonymes="s" type="FLOAT" help="Scales the loaded flows by FLOAT"/>
+        <additive-traffic value="true" type="BOOL" help="Keep traffic flows of all time slots in the net"/>
+        <paths value="10" type="INT" help="Use INTEGER as the number of paths needed to be searched for each OD pair at each iteration"/>
+        <paths.penalty value="1" type="FLOAT" help="Penalize existing routes with FLOAT to find secondary routes"/>
+        <max-iterations value="1000" synonymes="i" type="INT" help="maximal number of iterations for new route searching in incremental and stochastic user assignment"/>
+        <max-inner-iterations value="1000" type="INT" help="maximal number of inner iterations for user equilibrium calcuation in the stochastic user assignment"/>
+        <skip-new-routes value="true"/>
+    </processing>
+
+    <defaults>
+        <flow-output.departlane value="free" synonymes="departlane" type="STR" help="Assigns a default depart lane"/>
+        <flow-output.departpos value="" synonymes="departpos" type="STR" help="Assigns a default depart position"/>
+        <flow-output.departspeed value="0" synonymes="departspeed" type="STR" help="Assigns a default depart speed"/>
+        <flow-output.arrivallane value="" synonymes="arrivallane" type="STR" help="Assigns a default arrival lane"/>
+        <flow-output.arrivalpos value="" synonymes="arrivalpos" type="STR" help="Assigns a default arrival position"/>
+        <flow-output.arrivalspeed value="" synonymes="arrivalspeed" type="STR" help="Assigns a default arrival speed"/>
+    </defaults>
+
+    <time>
+        <begin value="0"/>
+        <end value="86400"/>
+    </time>
+    <report>
+        <verbose value="true"/>
+        <print-options value="false"/>
+        <help value=""/>
+        <version value="false"/>
+        <xml-validation value="auto"/>
+        <xml-validation.net value="auto"/>
+        <no-warnings value="true"/>
+        <aggregate-warnings value="-1"/>
+        <ignore-errors value="true"/>
+
+    </report>
+    <random_number>
+        <random value="false"/>
+    </random_number>
+
+</configuration>

@@ -3,6 +3,8 @@ import os
 import subprocess
 import stg
 import click
+import shutil
+from tqdm import tqdm
 
 
 class Config(object):
@@ -12,13 +14,19 @@ class Config(object):
         self.processors = multiprocessing.cpu_count()
         self.SUMO_exec = ""
         self.SUMO_templates = ""
-        self.SUMO_xmltocsv = ""
-        self.SUMO_outputs = ""
-        self.SUMO_parsed = ""
-        self.SUMO_detector = ""
         self.SUMO_tool = ""
-          
-
+        self.cfg = ""
+        self.detector = ""
+        self.dua = ""
+        self.ma = ""
+        self.O = ""
+        self.outputs = ""
+        self.trips = ""
+        self.xmltocsv = ""
+        self.parsed = ""
+        self.reroute = ""
+        self.realtraffic = ""
+         
 pass_config = click.make_pass_decorator(Config, ensure=True)
 
 
@@ -38,68 +46,84 @@ def cli(config, v):
 # Launch #
 ##########
 @cli.command()
-@click.option('-sp', '--sumo-path',
+@click.option('-s', '--sumo-bin',
               type=click.Path(exists=True, resolve_path=True),
               help='SUMO bin directory.')
 @click.option('-cfg', '--cfg-templates-path',
               type=click.Path(exists=True, resolve_path=True),
               help='Templates of SUMO configuration files.')
-@click.option('--output-dir',
+@click.option('-rt', '--real-traffic',
+              type=click.Path(exists=True),
+              help='Path to real traffic file with .csv format. ')
+@click.option('-o','--output-dir',
               type=click.Path(exists=True, resolve_path=True),
               help="Vehicles' traces output directory (routes,trips,flows).")
-@click.option('-st', '--SUMO-tool',
-              default="OD2Trips",
-              help='SUMO demand generation tool [OD2Trips, DUArouter, DUAIterate, MArouter, RandomTrips]')
+@click.option('-st', '--sumo-tool',
+              default="od2",
+              help='SUMO demand generation tool [od2, dua, DUAIterate, ma, RandomTrips]')
 @click.option('-p', '--max-processes',
               default=1,
               help='The maximum number of parallel simulations. [ default available cpus are used ]')
 @click.option('--sim-time', '-t',
-              default=300,
+              default=1,
               show_default=True,
-              help='SUMO simulation time.')
-@click.option('-r', '--repetitions',
+              help='Number of hours to simulate  (e.g., 24 hours)')
+@click.option('-n', '--repetitions',
               default=1,
               show_default=True,
               help='Number of repetitions.')
 
     
 @pass_config
-def generator(config, SUMO_tool, sumo_path):
+def generator(config, real_traffic, sumo_bin, output_dir, cfg_templates_path, sumo_tool, max_processes, sim_time, repetitions):
     """
     Traffic generator
     """
-    if config.verbose: click.echo('\n Setting program paths....')
+    if config.verbose: click.echo(f'\n Setting program paths.... \n SUMO Installation: {sumo_bin} \n SUMO Templates: {cfg_templates_path}')
+    #sumo = get_sumo_path('sumo') # try to get sumo installation dir 
     
-    # Update paths  
-    config.SUMO_exec = sumo_path
+    # Create/Update paths  
+    config.SUMO_exec = sumo_bin
     config.SUMO_outputs = os.path.join(config.parents_dir, 'outputs')
-    os.mkdir(config.SUMO_outputs)
-    if SUMO_tool:
-        config.SUMO_tool = os.path.join(config.SUMO_outputs, SUMO_tool)
-        os.mkdir(config.SUMO_tool)
-        
-        
-        
-        
-        
-    #if SUMO_tool == "OD2Trips":
-    #    stg.od2run(config)
-    #else:
-    #    click.echo('\nSUMO tool not supported.')
+    create_folder(config.SUMO_outputs)
+    if sumo_tool in ['od2', 'ma','dua']:
+        config.SUMO_tool = os.path.join(config.SUMO_outputs, sumo_tool)
+        config.realtraffic = real_traffic
+        update_paths(config)
+     
+        # SUMO Tools
+        if sumo_tool =='od2':
+            stg.od2(config, sim_time, repetitions, sim_time)
+          
+  
+    else:
+        click.echo('\n SUMO tool not supported.')
 
-    #if output_dir is None: output_dir = os.path.join(config.parents_dir, 'results', config.mac)
-    #if sumo_path is None: sumo_path = get_sumo_path('sumo')  # Try to get SUMO installation
-    #if os.path.exists(sumo_path) and os.path.exists(cfg_templates_path):
-    #    if config.verbose:
-    #        click.echo(' SUMO installation: {}'.format(sumo_path))
-    #        click.echo(' SUMO Templates: {}'.format(cfg_templates_path))
-    #    updated_max_processes = get_MAX_PROCESS(config, max_processes)
-        # Execute OMNET simulation campaign
-    #    stg.run(output_dir, updated_max_processes, sim_time, repetitions,
-    #            config.verbose)
-    #else:
-    #    click.echo('\nNo such file or directory or is empty: {sumo_path} or {cfg_templates_path}')
 
+def update_paths(config):
+    os.mkdir(config.SUMO_tool)   
+    subfolders = ['trips', 'O', 'dua', 'ma', 'cfg', 'outputs', 'detector', 'xmltocsv', 'parsed', 'reroute']
+    for sf in tqdm(subfolders):
+        create_folder(os.path.join(config.SUMO_tool, sf)) 
+    config.trips = os.path.join(config.SUMO_tool, 'trips')
+    config.O = os.path.join(config.SUMO_tool, 'O')
+    config.dua = os.path.join(config.SUMO_tool, 'dua')
+    config.ma = os.path.join(config.SUMO_tool, 'ma')
+    config.cfg = os.path.join(config.SUMO_tool, 'cfg')
+    config.outputs = os.path.join(config.SUMO_tool, 'outputs')
+    config.detector = os.path.join(config.SUMO_tool, 'detector')
+    config.xmltocsv = os.path.join(config.SUMO_tool, 'xmltocsv')
+    config.parsed = os.path.join(config.SUMO_tool, 'parsed')
+    config.reroute = os.path.join(config.SUMO_tool, 'reroute')
+        
+    
+       
+def create_folder(dir):
+    if os.path.exists(dir):
+        shutil.rmtree(dir)
+    os.makedirs(dir)
+    
+    
 
 def get_sumo_path(app):
     """
@@ -107,7 +131,8 @@ def get_sumo_path(app):
     Args:
         application: 'sumo'
     """
-
+   
+    
     command = 'whereis' if os.name != 'nt' else 'which'
     r = subprocess.getoutput('{0} {1}'.format(command, app))
     app_instance = (r.strip('sumo:').strip()).split(' ')

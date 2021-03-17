@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on Sat Oct 24 13:22:41 2020 by Eclipse SUMO duarouter Version 1.5.0
+-->
+
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/duarouterConfiguration.xsd">
+    <input>
+        <net-file value="/root/Desktop/MSWIM/Revista/sim_files/templates/osm.net.xml"/>
+        <!--<additional-files value="/root/Desktop/MSWIM/Revista/sim_files/templates/TAZ.xml, /root/Desktop/MSWIM/Revista/sim_files/templates/vtype.xml" />-->
+	
+    </input>
+    <output>
+        <precision value="2"/>
+        <precision.geo value="6"/>
+        <human-readable-time value="false"/>
+    </output>
+    <processing>
+        <unsorted-input value="true"/>
+        <route-steps value="600"/>
+        <no-internal-links value="false"/>
+        <randomize-flows value="false"/>
+        <max-alternatives value="100"/>
+        <with-taz value="false"/>
+        <repair value="true"/>
+	<repair.to value="true"/>
+	<mapmatch.distance value="1"/>
+        <mapmatch.junctions value="false"/>
+        <bulk-routing value="false"/>
+        <routing-threads value="20"/>
+        <routing-algorithm value="dijkstra"/>
+        <keep-all-routes value="true"/>
+        <skip-new-routes value="false"/>
+        <route-choice-method value="logit"/>
+    </processing>
+    <defaults>
+        <defaults-override value="false"/>
+    </defaults>
+    <time>
+        <begin value="0"/>
+        <end value="86400"/>
+    </time>
+    <report>
+        <verbose value="false"/>
+        <print-options value="false"/>
+        <help value=""/>
+        <version value="false"/>
+        <xml-validation value="auto"/>
+        <xml-validation.net value="auto"/>
+        <no-warnings value="true"/>
+        <aggregate-warnings value="-1"/>
+        <ignore-errors value="true"/>
+        <stats-period value="-1"/>
+        <no-step-log value="true"/>
+    </report>
+    <random_number>
+        <random value="false"/>
+    </random_number>
+</configuration>
