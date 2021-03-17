@@ -26,6 +26,8 @@ class Config(object):
         self.parsed = ""
         self.reroute = ""
         self.realtraffic = ""
+        self.O_district = ""
+        self.D_district = ""
          
 pass_config = click.make_pass_decorator(Config, ensure=True)
 
@@ -52,9 +54,13 @@ def cli(config, v):
 @click.option('-cfg', '--cfg-templates-path',
               type=click.Path(exists=True, resolve_path=True),
               help='Templates of SUMO configuration files.')
-@click.option('-rt', '--real-traffic',
+@click.option('-T', '--real-traffic',
               type=click.Path(exists=True),
               help='Path to real traffic file with .csv format. ')
+@click.option('-O', '--O-district-name',
+              help='Origin district name as in TAZ file.')
+@click.option('-D', '--D-district-name',
+              help='Destination district name as in TAZ file.')
 @click.option('-o','--output-dir',
               type=click.Path(exists=True, resolve_path=True),
               help="Vehicles' traces output directory (routes,trips,flows).")
@@ -75,7 +81,7 @@ def cli(config, v):
 
     
 @pass_config
-def generator(config, real_traffic, sumo_bin, output_dir, cfg_templates_path, sumo_tool, max_processes, sim_time, repetitions):
+def generator(config, real_traffic, o_district_name, d_district_name, sumo_bin, output_dir, cfg_templates_path, sumo_tool, max_processes, sim_time, repetitions):
     """
     Traffic generator
     """
@@ -86,14 +92,17 @@ def generator(config, real_traffic, sumo_bin, output_dir, cfg_templates_path, su
     config.SUMO_exec = sumo_bin
     config.SUMO_outputs = os.path.join(config.parents_dir, 'outputs')
     create_folder(config.SUMO_outputs)
+  
     if sumo_tool in ['od2', 'ma','dua']:
         config.SUMO_tool = os.path.join(config.SUMO_outputs, sumo_tool)
+        config.O_district = o_district_name
+        config.D_district = d_district_name
         config.realtraffic = real_traffic
         update_paths(config)
-     
+        cpu_processes = get_MAX_PROCESS(config, max_processes)
+        
         # SUMO Tools
-        if sumo_tool =='od2':
-            stg.od2(config, sim_time, repetitions, sim_time)
+        if sumo_tool =='od2':stg.od2(config, sim_time, repetitions, sim_time, cpu_processes)
           
   
     else:

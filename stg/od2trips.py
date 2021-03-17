@@ -10,86 +10,16 @@ import shutil
 from tqdm import tqdm
 from joblib import Parallel, delayed, parallel_backend
 import subprocess
-from stg.utils import create_folder, cpu_mem_folders
-
+from stg.utils import create_folder, cpu_mem_folders, detector_cfg
 
 # import sumo tool xmltocsv
-os.environ['SUMO_HOME']='/opt/sumo-1.8.0'
+#os.environ['SUMO_HOME']='/opt/sumo-1.8.0'
 
 from stg.utils import SUMO_preprocess, parallel_batch_size, detector_cfg
 
 
-# Informacion de origen / destino como aparece en TAZ file 
-origin_district = ['Hospitalet']
-destination_distric = ['SanAdria']
 factor = 1
-
 """
-# number of cpus
-processors = multiprocessing.cpu_count() # due to memory lack -> Catalunya  map = 2GB
-
-# General settings
-n_repetitions = 1 # number of repetitions
-
-k = 0
-
-sim_time = 24 # in hours # TO DO parameter of time in files
-end_hour = 24
-factor = 1.0 # multiplied by the number of vehicles
-
-# Vehicles equiped with a device Reroute probability
-rr_prob = 0
-
-# routing dua / ma
-routing = 'od2'
-
-
-
- 
-# Static paths 
-sim_dir = '/root/Desktop/MSWIM/Revista/sim_files'   # directory of sumo cfg files
-base_dir =  os.path.join(sim_dir,'Taz',f'{routing}') # directorio base
-traffic = os.path.join(sim_dir, '..', 'TrafficPgSanJoan.csv')
-new_dir = os.path.join(base_dir, f'{k}_{rr_prob}')
-# Sumo templates
-duarouter_conf = os.path.join(sim_dir,'templates','duarouter.cfg.xml') # duaroter.cfg file location
-marouter_conf = os.path.join(sim_dir,'templates','marouter.cfg.xml') # duaroter.cfg file location
-sumo_cfg = os.path.join(sim_dir,'templates', 'osm.sumo.cfg')
-od2trips_conf =  os.path.join(sim_dir,'templates', 'od2trips.cfg.xml')
-
-TAZ = os.path.join(sim_dir,'templates', 'TAZ.xml')
-vtype = os.path.join(sim_dir,'templates', 'vtype.xml')
-
-# New paths
-create_folder(new_dir)  
-folders = ['trips', 'O', 'dua', 'ma', 'cfg', 'outputs', 'detector', 'xmltocsv', 'parsed', 'reroute']
-[create_folder(os.path.join(new_dir, f)) for f in folders]
-
-# create folders for cpu mem check
-cpu, mem, disk = cpu_mem_folders(new_dir)
-
-# Static paths
-dua = os.path.join(new_dir, 'dua')
-O = os.path.join(new_dir, 'O')
-config = os.path.join(new_dir, 'cfg')
-outputs = os.path.join(new_dir, 'outputs') 
-detector = os.path.join(new_dir, 'detector') 
-csv = os.path.join(new_dir, 'xmltocsv')
-parsed = os.path.join(new_dir, 'parsed')
-reroute = os.path.join(new_dir, 'reroute')
-trips = os.path.join(new_dir, 'trips')
-ma = os.path.join(new_dir, 'ma')
-
-# Create detector file
-detector_dir = os.path.join(new_dir,'detector.add.xml')
-detector_cfg(os.path.join(sim_dir,'templates', 'detector.add.xml'),detector_dir, os.path.join(detector, 'detector.xml')) 
-
-
-# Custom routes via
-#route_0 = '237659862#23 208568871#3 208568871#4 208568871#5'
-#route_0 = '208568871#5'
-route_0 = '20476283#0'
-new_emissions = '/root/Desktop/MSWIM/Revista/sim_files/templates/emissions.add.xml'
 
 class folders:
     traffic = traffic
@@ -114,52 +44,62 @@ def clean_folder(folder):
     #print(f'Cleanned: {folder}')
     
 
-def gen_routes(O, k, O_files):
-    
+def gen_routes(O, k, O_files, folders):
+    """
+    Generate configuration files for od2 trips
+    """
     # Generate od2trips cfg
-    cfg_name, output_name = gen_od2trips(O,k)
+    cfg_name, output_name = gen_od2trips(O,k, folders)
     
     # Execute od2trips
-    output_name = exec_od2trips(cfg_name, output_name)
-    
-    # Custom route via='edges'
-    via_trip = custom_routes(output_name, k)
-   
+    output_name = exec_od2trips(cfg_name, output_name, folders)
     
     # Generate sumo cfg
-    
-    # via
-    #od2_sim_cfg_file = gen_sumo_cfg('od2trips', via_trip, k)
-    
-    # no via
-    od2_sim_cfg_file = gen_sumo_cfg('od2trips', output_name, k)
+    od2_sim_cfg_file = gen_sumo_cfg('od2trips', output_name, k, folders, '0') # last element reroute probability
     
     return od2_sim_cfg_file
+    
         
         
 def gen_route_files(folders, k, repetitions, end_hour):
+    """
+    Generate O files given the real traffic in csv format. 
+    Args:
+    folder: (path class) .
+    max_processors: (int) The max number of cpus to use. By default, all cpus are used.
+    repetitios: number of repetitions
+    end hour: The simulation time is the end time of the simulations 
+    """
     # generate cfg files
-    for h in origin_district:
+    for h in [folders.O_district]:
         print(f'\nGenerating cfg files for TAZ: {h}')
-        for sd in tqdm(destination_distric):
+        for sd in tqdm([folders.D_district]):
             # build O file    
             O_name = os.path.join(folders.O, f'{h}_{sd}')
             create_O_file(folders, O_name, f'{h}', f'{sd}', end_hour)
-            
-            """
+                       
             # Generate cfg files 
             for k in range(repetitions):
                 # backup O files
                 O_files = os.listdir(folders.O)
-                # Gen Od2trips/MArouter
-                od2_sim_cfg_file = gen_routes(O_name, k, O_files)
-            """
-    #return od2_sim_cfg_file
-    return 'a'
-
+                # Gen Od2trips
+                od2_sim_cfg_file = gen_routes(O_name, k, O_files, folders)
+               
+    return od2_sim_cfg_file
+    
     
 
 def create_O_file(folders, fname, origin_district, destination_distric, end_hour):
+    """
+    Generate O files given the real traffic in csv format and oriding/destination districs names as in TAZ file. 
+    An O file is generated each 15 minutes.
+    Args:
+    folder: (path class) .
+    O distric name: origin distric
+    D distric name: Destination distric
+    repetitios: number of repetitions
+    end
+    """
     #create 24 hour files
     traffic = pd.read_csv(folders.realtraffic)
  
@@ -191,96 +131,34 @@ def create_O_file(folders, fname, origin_district, destination_distric, end_hour
             O.writelines(text_list)
             O.close()
 
-
-def custom_routes(trips, k):
-    trip = os.path.join(folders.O, trips)
-    
-    # Open original file
-    tree = ET.parse(trip)
-    root = tree.getroot()
-     
-    # Update via route in xml
-    [child.set('via', route_0) for child in root]
-
-    # name    
-    curr_name = os.path.basename(trips).split('_')
-    curr_name = curr_name[0] + '_' + curr_name[1]
-    output_name = os.path.join(folders.O, f'{curr_name}_trips_{k}.rou.xml')
-           
-    # Write xml
-    cfg_name = os.path.join(folders.O, output_name)
-    tree.write(cfg_name) 
-    return output_name
-    
-
-def gen_MArouter(O, i, O_files, trips):
-    # read O files
-    O_listToStr = ','.join([f'{os.path.join(folders.O, elem)}' for elem in O_files]) 
- 
-    # Open original file
-    tree = ET.parse(marouter_conf)
-    
-    # Update trip input
-    parent = tree.find('input')
-    #ET.SubElement(parent, 'route-files').set('value', f'{trips}')    
-    ET.SubElement(parent, 'od-matrix-files').set('value', f'{O_listToStr}')    
-  
-    # update additionals 
-    add_list = [TAZ,vtype]
-    additionals = ','.join([elem for elem in add_list]) 
-    
-    # Update detector
-    ET.SubElement(parent, 'additional-files').set('value', f'{additionals}')    
-
-     
-    # Update output
-    parent = tree.find('output')
-    curr_name = os.path.basename(O)
-    output_name = os.path.join(folders.ma, f'{curr_name}_ma_{i}.rou.xml')
-    ET.SubElement(parent, 'output-file').set('value', output_name)    
-    
-    # Update seed number
-    parent = tree.find('random_number')
-    ET.SubElement(parent, 'seed').set('value', f'{i}')    
-    
-    # Write xml
-    cfg_name = os.path.join(folders.O, f'{curr_name}_marouter_{i}.cfg.xml')
-    tree.write(cfg_name) 
-    return cfg_name, output_name
-
-    
-def gen_DUArouter(trips, i):
-    # Open original file
-    tree = ET.parse(duarouter_conf)
-    
-    # Update trip input
-    parent = tree.find('input')
-    ET.SubElement(parent, 'route-files').set('value', f'{trips}')    
-     
-    # Update output
-    parent = tree.find('output')
-    curr_name = os.path.basename(trips).split('_')
-    curr_name = curr_name[0] + '_' + curr_name[1]
-    output_name = os.path.join(folders.dua, f'{curr_name}_dua_{i}.rou.xml')
-    ET.SubElement(parent, 'output-file').set('value', output_name)    
-    
-    # Update seed number
-    parent = tree.find('random_number')
-    ET.SubElement(parent, 'seed').set('value', f'{i}')    
-    
-    # Write xml
-    original_path = os.path.dirname(trips)
-    cfg_name = os.path.join(original_path, f'{curr_name}_duarouter_{i}.cfg.xml')
-    tree.write(cfg_name) 
-    return cfg_name, output_name
         
+def gen_od2trips(O,k, folders):
+    """
+    Generate the od2trips configutation file
     
+    Parameters
+    ----------
+    O : TYPE
+        DESCRIPTION.
+    k : TYPE
+        DESCRIPTION.
+    folders : path class
+        Contains all paths for the simulation.
+
+    Returns
+    -------
+    cfg_name : TYPE
+        DESCRIPTION.
+    output_name : TYPE
+        DESCRIPTION.
+
+    """
     
-def gen_od2trips(O,k):
     # read O files
     O_files_list = os.listdir(folders.O)
     O_listToStr = ','.join([f'{os.path.join(folders.O, elem)}' for elem in O_files_list]) 
-    
+    TAZ = os.path.join(folders.parents_dir, 'templates', 'TAZ.xml')
+    od2trips_conf =  os.path.join(folders.parents_dir,'templates', 'od2trips.cfg.xml')
     # Open original file
     tree = ET.parse(od2trips_conf)
     
@@ -305,19 +183,46 @@ def gen_od2trips(O,k):
     return cfg_name, output_name    
 
 
-def gen_sumo_cfg(routing, dua, k):
+def gen_sumo_cfg(routing, dua, k, folders, rr_prob):
+    """
+    Generate the sumo cfg file to execute the simulation
+
+    Parameters
+    ----------
+    routing : TYPE
+        DESCRIPTION.
+    dua : TYPE
+        DESCRIPTION.
+    k : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    output_dir : TYPE
+        DESCRIPTION.
+
+    """
+    sumo_cfg = os.path.join(folders.parents_dir,'templates', 'osm.sumo.cfg')
+    vtype = os.path.join(folders.parents_dir,'templates', 'vtype.xml')
+    new_emissions = os.path.join(folders.parents_dir,'templates', 'emissions.add.xml')
+    TAZ = os.path.join(folders.parents_dir, 'templates', 'TAZ.xml')
+    net_file = os.path.join(folders.parents_dir, 'templates', 'osm.net.xml')
+    
+    # Create detector file
+    detector_dir = os.path.join(folders.parents_dir,'templates','detector.add.xml')
+    detector_cfg(os.path.join(folders.parents_dir,'templates', 'detector.add.xml'),detector_dir, os.path.join(folders.SUMO_tool,'detector', 'detector.xml')) 
+
+
     # Open original file
     tree = ET.parse(sumo_cfg)
+      
     
     # Update rou input
     parent = tree.find('input')
+    ET.SubElement(parent, 'net-file').set('value', f'{net_file}') 
     ET.SubElement(parent, 'route-files').set('value', f'{dua}')    
     
-    
-    if routing =='dua':
-        add_list = [detector_dir]
-    else:    
-        add_list = [TAZ, detector_dir, vtype, new_emissions]
+    add_list = [TAZ, detector_dir, vtype]
     
     additionals = ','.join([elem for elem in add_list]) 
     
@@ -342,20 +247,20 @@ def gen_sumo_cfg(routing, dua, k):
             folders.outputs, f'{curr_name}_{out}_{k}.xml'))    
      
     # Write xml
-    output_dir = os.path.join(folders.config, f'{curr_name}_{routing}_{k}.sumo.cfg')
+    output_dir = os.path.join(folders.cfg, f'{curr_name}_{routing}_{k}.sumo.cfg')
     tree.write(output_dir)
    
     return output_dir
     
     
     
-def exec_od2trips(fname, tripfile):
-    print('\nRouting .......')
+def exec_od2trips(fname, tripfile, folders):
+    print('\n OD2Trips running .............\n')
     cmd = f'od2trips -v -c {fname}'
     os.system(cmd)
     # remove fromtotaz
     output_file = f'{tripfile}.xml'
-    rm_taz = f"sed 's/fromTaz=\"Hospitalet\" toTaz=\"SanAdria\"//' {tripfile} > {output_file}"
+    rm_taz = f"sed 's/fromTaz=\"{folders.O_district}\" toTaz=\"{folders.D_district}\"//' {tripfile} > {output_file}"
     os.system(rm_taz)
     return output_file
     
@@ -371,58 +276,6 @@ def exec_marouter_cmd(fname):
     cmd = f'marouter -c {fname}'
     os.system(cmd) 
 
-
-    
-def exec_DUArouter():
-    cfg_files = os.listdir(folders.O)
-  
-    # Get dua.cfg files list
-    dua_cfg_list = []
-    [dua_cfg_list.append(cf) for cf in cfg_files if 'duarouter' in cf.split('_')]
- 
-    """
-    # duaiterate for iterative assigment
-    sumo_tool = '/opt/sumo-1.8.0/tools/assign/duaIterate.py'
-    net_file = '/root/Desktop/MSWIM/Revista/sim_files/templates/osm.net.xml'
-    
-    trip_file = '/root/Desktop/MSWIM/Revista/sim_files/Taz/dua/0_0/O/Hospitalet_SanAdria_trips_0.rou.xml'
-    n_iter = 10
-    
-    cmd = f'python {sumo_tool} -n {net_file} -+ {vtype} -t {trip_file} -l {n_iter}'
-    os.system(cmd)
-    
-    """
-    if dua_cfg_list:
-        batch = parallel_batch_size(dua_cfg_list)
-        
-        # Generate dua routes
-        print(f'\nGenerating duaroutes ({len(dua_cfg_list)} files) ...........\n')
-        with parallel_backend("loky"):
-            Parallel(n_jobs=processors, verbose=0, batch_size=batch)(delayed(exec_duarouter_cmd)(
-                     os.path.join(folders.O, cfg)) for cfg in dua_cfg_list)
-    else:
-       sys.exit('No dua.cfg files}')
-    
-    
- 
-def exec_MArouter():
-    cfg_files = os.listdir(folders.O)
-  
-    # Get ma.cfg files list
-    ma_cfg_list = []
-    [ma_cfg_list.append(cf) for cf in cfg_files if 'marouter' in cf.split('_')]
-    
-    if ma_cfg_list:
-        batch = parallel_batch_size(ma_cfg_list)
-        
-        # Generate dua routes
-        print(f'\nGenerating MAroutes ({len(ma_cfg_list)} files) ...........\n')
-        with parallel_backend("loky"):
-            Parallel(n_jobs=processors, verbose=0, batch_size=batch)(delayed(exec_marouter_cmd)(
-                     os.path.join(folders.O, cfg)) for cfg in ma_cfg_list)
-    else:
-       sys.exit('No ma.cfg files}')
-       
 
 def summary():
     # Count generated files
@@ -462,14 +315,14 @@ def clean_memory():
     # print("Memory cleaned")
     
     
-def simulate():
-    simulations = os.listdir(folders.config)
+def simulate(folders, processors):
+    simulations = os.listdir(folders.cfg)
     if simulations: 
         batch = parallel_batch_size(simulations)
         # Execute simulations
         print('\nExecuting simulations ....')
         with parallel_backend("loky"):
-                Parallel(n_jobs=processors, verbose=0, batch_size=batch)(delayed(exec_sim_cmd)(s) for s in simulations)
+                Parallel(n_jobs=processors, verbose=0, batch_size=batch)(delayed(exec_sim_cmd)(s, folders) for s in simulations)
         clean_memory()
         print(f'\n{len(os.listdir(folders.outputs))} outputs generated: {folders.outputs}')
     else:
@@ -477,20 +330,19 @@ def simulate():
     print_time('End simulations ')
                 
        
-def exec_sim_cmd(cfg_file):
-    print('\nSimulating .....')
-    full_path = os.path.join(folders.config, cfg_file)
+def exec_sim_cmd(cfg_file, folders):
+    #print('\n Simulating ............\n')
+    full_path = os.path.join(folders.cfg, cfg_file)
     cmd = f'sumo -c {full_path}'
     os.system(cmd)
   
     
-  
-def SUMO_outputs_process():
+def SUMO_outputs_process(folders):
     class options:
-        sumofiles = outputs
-        xmltocsv = csv
-        parsed = parsed
-        detector = detector
+        sumofiles = folders.outputs
+        xmltocsv = folders.xmltocsv
+        parsed = folders.parsed
+        detector = folders.detector
     SUMO_preprocess(options)
       
 def print_time(process_name):
@@ -499,10 +351,30 @@ def print_time(process_name):
     print(f"\n{process_name} Time =", current_time)
     
     
-def od2(config,sim_time,repetitions, end_hour):
+def od2(config,sim_time,repetitions, end_hour, processors):
+    """
+    OD2Trips funcions
+
+    Parameters
+    ----------
+    config : TYPE
+        DESCRIPTION.
+    sim_time : TYPE
+        DESCRIPTION.
+    repetitions : TYPE
+        DESCRIPTION.
+    end_hour : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
     od2_sim_cfg_file = gen_route_files(config, 0, repetitions, end_hour)
-    
-    
+    simulate(config, processors)
+    # Outputs preprocess
+    SUMO_outputs_process(config)
     
     
     """
@@ -515,16 +387,4 @@ def od2(config,sim_time,repetitions, end_hour):
     """
 
 
-# Generate cfg files        
 
-#od2_sim_cfg_file = gen_route_files()
-
-# Execute simulations
-#summary()
-
-# Exec simulations
-#print_time('Begin simulation ')
-#simulate()     
-
-# Outputs preprocess
-#SUMO_outputs_process()

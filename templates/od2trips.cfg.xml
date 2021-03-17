@@ -11,7 +11,7 @@
     <output>
         <precision value="2"/>
         <precision.geo value="6"/>
-        <human-readable-time value="false"/>
+        <!--<human-readable-time value="false"/>-->
         <ignore-vehicle-type value="false"/>
 	
     </output>
@@ -40,7 +40,7 @@
         <xml-validation value="auto"/>
         <xml-validation.net value="never"/>
         <no-warnings value="true"/>
-        <aggregate-warnings value="-1"/>
+        <!--<aggregate-warnings value="-1"/>-->
         <ignore-errors value="true"/>
     </report>
     <random_number>

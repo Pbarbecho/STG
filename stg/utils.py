@@ -371,9 +371,8 @@ def SUMO_preprocess(options):
 
 
     # converte dector to csv
-    
-    
-    print(f'\nLista files in detector folder: {os.listdir(options.detector)}')
+   
+    print(f'\nDetector folder: {os.listdir(options.detector)}')
     singlexml2csv(os.listdir(options.detector)[0], options) 
     
     
