@@ -14,7 +14,7 @@ import matplotlib as mpl
 from matplotlib import rc
 import matplotlib.colors as mcolors
 from scipy.interpolate import interp1d
-from utils import filter_emission_traffic_jams, process_emissions_file
+from stg.utils import filter_emission_traffic_jams, process_emissions_file
 
 
 # import sumo tool xmltocsv

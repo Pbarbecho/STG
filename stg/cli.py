@@ -16,6 +16,7 @@ class Config(object):
         self.SUMO_outputs = ""
         self.SUMO_parsed = ""
         self.SUMO_detector = ""
+        self.SUMO_tool = ""
           
 
 pass_config = click.make_pass_decorator(Config, ensure=True)
@@ -68,13 +69,23 @@ def generator(config, SUMO_tool, sumo_path):
     Traffic generator
     """
     if config.verbose: click.echo('\n Setting program paths....')
+    
     # Update paths  
     config.SUMO_exec = sumo_path
-    
-    if SUMO_tool == "OD2Trips":
-        stg.od2run(config)
-    else:
-        click.echo('\nSUMO tool not supported.')
+    config.SUMO_outputs = os.path.join(config.parents_dir, 'outputs')
+    os.mkdir(config.SUMO_outputs)
+    if SUMO_tool:
+        config.SUMO_tool = os.path.join(config.SUMO_outputs, SUMO_tool)
+        os.mkdir(config.SUMO_tool)
+        
+        
+        
+        
+        
+    #if SUMO_tool == "OD2Trips":
+    #    stg.od2run(config)
+    #else:
+    #    click.echo('\nSUMO tool not supported.')
 
     #if output_dir is None: output_dir = os.path.join(config.parents_dir, 'results', config.mac)
     #if sumo_path is None: sumo_path = get_sumo_path('sumo')  # Try to get SUMO installation

@@ -10,13 +10,13 @@ import shutil
 from tqdm import tqdm
 from joblib import Parallel, delayed, parallel_backend
 import subprocess
-from utils import create_folder, cpu_mem_folders
+from stg.utils import create_folder, cpu_mem_folders
 
 
 # import sumo tool xmltocsv
 os.environ['SUMO_HOME']='/opt/sumo-1.8.0'
 
-from utils import SUMO_preprocess, parallel_batch_size, detector_cfg
+from stg.utils import SUMO_preprocess, parallel_batch_size, detector_cfg
 
 # number of cpus
 processors = multiprocessing.cpu_count() # due to memory lack -> Catalunya  map = 2GB
@@ -490,6 +490,10 @@ def print_time(process_name):
     print(f"\n{process_name} Time =", current_time)
       
 def od2run(config):
+    
+    
+    
+    new_dir = os.path.join(base_dir, f'{k}_{rr_prob}')
     print(config.SUMO_exec)
     
     """

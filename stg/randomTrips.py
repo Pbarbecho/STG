@@ -7,7 +7,7 @@ from tqdm import tqdm
 from datetime import datetime
 import shutil
 import subprocess
-from utils import SUMO_preprocess, detector_cfg, kill_cpu_pid, create_folder, cpu_mem_folders
+from stg.utils import SUMO_preprocess, detector_cfg, kill_cpu_pid, create_folder, cpu_mem_folders
 from tqdm import tqdm
 
 
