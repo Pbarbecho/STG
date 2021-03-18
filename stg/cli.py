@@ -51,7 +51,7 @@ def cli(config, v):
 @click.option('-s', '--sumo-bin',
               type=click.Path(exists=True, resolve_path=True),
               help='SUMO bin directory.')
-@click.option('-cfg', '--cfg-templates-path',
+@click.option('-cfg', '--cfg-templates',
               type=click.Path(exists=True, resolve_path=True),
               help='Templates of SUMO configuration files.')
 @click.option('-T', '--real-traffic',
@@ -64,7 +64,7 @@ def cli(config, v):
 @click.option('-o','--output-dir',
               type=click.Path(exists=True, resolve_path=True),
               help="Vehicles' traces output directory (routes,trips,flows).")
-@click.option('-st', '--sumo-tool',
+@click.option('-tool',
               default="od2",
               help='SUMO demand generation tool [od2, dua, DUAIterate, ma, RandomTrips]')
 @click.option('-p', '--max-processes',
@@ -81,36 +81,43 @@ def cli(config, v):
 
     
 @pass_config
-def generator(config, real_traffic, o_district_name, d_district_name, sumo_bin, output_dir, cfg_templates_path, sumo_tool, max_processes, sim_time, repetitions):
+def trafficgenerator(config, real_traffic, o_district_name, d_district_name, sumo_bin, output_dir, cfg_templates, tool, max_processes, sim_time, repetitions):
     """
-    Traffic generator
+    STG SUMO Traffic generator. Required options -T, -O, -D, -cfg
     """
-    if config.verbose: click.echo(f'\n Setting program paths.... \n SUMO Installation: {sumo_bin} \n SUMO Templates: {cfg_templates_path}')
-    #sumo = get_sumo_path('sumo') # try to get sumo installation dir 
     
-    # Create/Update paths  
-    config.SUMO_exec = sumo_bin
-    config.SUMO_outputs = os.path.join(config.parents_dir, 'outputs')
-    create_folder(config.SUMO_outputs)
-  
-    if sumo_tool in ['od2', 'ma','dua']:
-        config.SUMO_tool = os.path.join(config.SUMO_outputs, sumo_tool)
-        config.O_district = o_district_name
-        config.D_district = d_district_name
-        config.realtraffic = real_traffic
-        update_paths(config)
-        cpu_processes = get_MAX_PROCESS(config, max_processes)
+    if real_traffic is None or o_district_name is None or d_district_name is None or cfg_templates is None:
+        click.echo('\n Empty arguments [-T, -O, -D, -cfg]. Use \x1B[3mstg trafficgenerator --help\x1B[23m')
+    else :
+        if config.verbose: click.echo(f'\n SUMO Installation: {sumo_bin} \n SUMO Templates: {cfg_templates}\n\n Setting program paths.... ')
+        #sumo = get_sumo_path('sumo') # try to get sumo installation dir 
         
-        # SUMO Tools
-        if sumo_tool =='od2':stg.od2(config, sim_time, repetitions, sim_time, cpu_processes)
-          
-  
-    else:
-        click.echo('\n SUMO tool not supported.')
+        # Create/Update paths  
+        config.SUMO_exec = sumo_bin
+        config.SUMO_outputs = os.path.join(config.parents_dir, 'outputs')
+        if not os.path.lexists(config.SUMO_outputs):os.makedirs(config.SUMO_outputs)
+             
+        if tool in ['od2', 'ma','dua']:
+            config.SUMO_tool = os.path.join(config.SUMO_outputs, tool)
+            config.O_district = o_district_name
+            config.D_district = d_district_name
+            config.realtraffic = real_traffic
+            update_paths(config)
+            cpu_processes = get_MAX_PROCESS(config, max_processes)
+            
+            # SUMO Tools
+            k = 0
+            if tool =='od2':stg.od2(config, k, repetitions, sim_time, cpu_processes, 'od2')
+            elif tool =='dua':stg.dua_ma(config, k, repetitions, sim_time, cpu_processes, 'dua')
+            elif tool =='ma':stg.dua_ma(config, k, repetitions, sim_time, cpu_processes, 'ma')
+              
+      
+        else:
+            click.echo('\n SUMO tool not supported.')
 
 
 def update_paths(config):
-    os.mkdir(config.SUMO_tool)   
+    create_folder(config.SUMO_tool)   
     subfolders = ['trips', 'O', 'dua', 'ma', 'cfg', 'outputs', 'detector', 'xmltocsv', 'parsed', 'reroute']
     for sf in tqdm(subfolders):
         create_folder(os.path.join(config.SUMO_tool, sf)) 

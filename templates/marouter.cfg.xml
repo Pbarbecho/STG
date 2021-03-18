@@ -5,13 +5,13 @@
 
 <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/marouterConfiguration.xsd">
     <input>
-        <net-file value="/root/Desktop/MSWIM/Revista/sim_files/templates/osm.net.xml"/>
+       
 	<taz-param value = "Hospitalet, SanAdria"/>
     </input>
     <output>
         <precision value="2" type="INT" help="Defines the number of digits after the comma for floating point output"/>
         <precision.geo value="6" type="INT" help="Defines the number of digits after the comma for lon,lat output"/>
-        <human-readable-time value="false" synonymes="H" type="BOOL" help="Write time values as hour:minute:second or day:hour:minute:second rathern than seconds"/>
+        <!--<human-readable-time value="false" synonymes="H" type="BOOL" help="Write time values as hour:minute:second or day:hour:minute:second rathern than seconds"/>-->
     </output>
     <processing>
 	<vtype value="car"/>	
@@ -55,7 +55,7 @@
         <xml-validation value="auto"/>
         <xml-validation.net value="auto"/>
         <no-warnings value="true"/>
-        <aggregate-warnings value="-1"/>
+        <!--<aggregate-warnings value="-1"/>-->
         <ignore-errors value="true"/>
 
     </report>

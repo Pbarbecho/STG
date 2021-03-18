@@ -9,6 +9,9 @@ import xml.etree.ElementTree as ET
 import psutil
 import shutil
 import numpy as np
+from datetime import datetime
+from joblib import Parallel, delayed, parallel_backend
+
 
 # import sumo tool xmltocsv
 os.environ['SUMO_HOME']='/opt/sumo-1.8.0'
@@ -25,6 +28,228 @@ else:
     sys.exit("please declare environment variable 'SUMO_HOME'")
 
 
+def SUMO_outputs_process(folders):
+    class options:
+        sumofiles = folders.outputs
+        xmltocsv = folders.xmltocsv
+        parsed = folders.parsed
+        detector = folders.detector
+    SUMO_preprocess(options)
+    
+    
+def print_time(process_name):
+    now = datetime.now()
+    current_time = now.strftime("%H:%M:%S")
+    print(f"\n{process_name} Time =", current_time)
+    
+    
+
+def simulate(folders, processors):
+    simulations = os.listdir(folders.cfg)
+    if simulations: 
+        batch = parallel_batch_size(simulations)
+        # Execute simulations
+        print('\nExecuting simulations ....')
+        with parallel_backend("loky"):
+                Parallel(n_jobs=processors, verbose=0, batch_size=batch)(delayed(exec_sim_cmd)(s, folders) for s in simulations)
+        clean_memory()
+        print(f'\n{len(os.listdir(folders.outputs))} outputs generated: {folders.outputs}')
+    else:
+       sys.exit('No sumo.cfg files}')
+    print_time('End simulations ')
+                
+       
+def exec_sim_cmd(cfg_file, folders):
+    #print('\n Simulating ............\n')
+    full_path = os.path.join(folders.cfg, cfg_file)
+    cmd = f'sumo -c {full_path}'
+    os.system(cmd)
+
+
+def gen_sumo_cfg(routing, dua, k, folders, rr_prob):
+    """
+    Generate the sumo cfg file to execute the simulation
+
+    Parameters
+    ----------
+    routing : TYPE
+        DESCRIPTION.
+    dua : TYPE
+        DESCRIPTION.
+    k : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    output_dir : TYPE
+        DESCRIPTION.
+
+    """
+    sumo_cfg = os.path.join(folders.parents_dir,'templates', 'osm.sumo.cfg')
+    vtype = os.path.join(folders.parents_dir,'templates', 'vtype.xml')
+    #new_emissions = os.path.join(folders.parents_dir,'templates', 'emissions.add.xml')
+    TAZ = os.path.join(folders.parents_dir, 'templates', 'TAZ.xml')
+    net_file = os.path.join(folders.parents_dir, 'templates', 'osm.net.xml')
+    
+    # Create detector file
+    detector_dir = os.path.join(folders.parents_dir,'templates','detector.add.xml')
+    detector_cfg(os.path.join(folders.parents_dir,'templates', 'detector.add.xml'),detector_dir, os.path.join(folders.SUMO_tool,'detector', 'detector.xml')) 
+
+
+    # Open original file
+    tree = ET.parse(sumo_cfg)
+      
+    
+    # Update rou input
+    parent = tree.find('input')
+    ET.SubElement(parent, 'net-file').set('value', f'{net_file}') 
+    ET.SubElement(parent, 'route-files').set('value', f'{dua}')    
+    
+    
+    if routing =='dua':add_list = [detector_dir, vtype]
+    elif routing =='ma':add_list = [TAZ, detector_dir, vtype]
+    elif routing =='od2':add_list = [TAZ, detector_dir, vtype]
+    
+    additionals = ','.join([elem for elem in add_list]) 
+    
+    # Update detector
+    ET.SubElement(parent, 'additional-files').set('value', f'{additionals}')    
+
+    # Routing
+    parent = tree.find('routing')
+    ET.SubElement(parent, 'device.rerouting.probability').set('value', f'{rr_prob}')   
+    ET.SubElement(parent, 'device.rerouting.output').set('value', f'{os.path.join(folders.reroute, "reroute.xml")}')   
+      
+    # Update outputs
+    parent = tree.find('output')
+    curr_name = os.path.basename(dua).split('_')
+    curr_name = curr_name[0] + '_' + curr_name[1]
+    
+    # outputs 
+    outputs = ['emission', 'summary', 'tripinfo']
+    for out in outputs:
+        ET.SubElement(parent, f'{out}-output').set('value', os.path.join(
+            folders.outputs, f'{curr_name}_{out}_{k}.xml'))    
+     
+    # Write xml
+    output_dir = os.path.join(folders.cfg, f'{curr_name}_{routing}_{k}.sumo.cfg')
+    tree.write(output_dir)
+    return output_dir
+
+
+def clean_memory():
+    #Clean memory cache at the end of simulation execution
+    if os.name != 'nt':  # Linux system
+        os.system('sync')
+        os.system('echo 3 > /proc/sys/vm/drop_caches')
+        os.system('swapoff -a && swapon -a')
+    # print("Memory cleaned")
+    
+    
+def exec_od2trips(fname, tripfile, folders):
+    print('\n OD2Trips running .............\n')
+    cmd = f'od2trips -v -c {fname}'
+    os.system(cmd)
+    # remove fromtotaz
+    output_file = f'{tripfile}.xml'
+    rm_taz = f"sed 's/fromTaz=\"{folders.O_district}\" toTaz=\"{folders.D_district}\"//' {tripfile} > {output_file}"
+    os.system(rm_taz)
+    return output_file
+
+
+def gen_od2trips(O,k, folders):
+    """
+    Generate the od2trips configutation file
+    
+    Parameters
+    ----------
+    O : TYPE
+        DESCRIPTION.
+    k : TYPE
+        DESCRIPTION.
+    folders : path class
+        Contains all paths for the simulation.
+
+    Returns
+    -------
+    cfg_name : TYPE
+        DESCRIPTION.
+    output_name : TYPE
+        DESCRIPTION.
+
+    """
+    
+    # read O files
+    O_files_list = os.listdir(folders.O)
+    O_listToStr = ','.join([f'{os.path.join(folders.O, elem)}' for elem in O_files_list]) 
+    TAZ = os.path.join(folders.parents_dir, 'templates', 'TAZ.xml')
+    od2trips_conf =  os.path.join(folders.parents_dir,'templates', 'od2trips.cfg.xml')
+    # Open original file
+    tree = ET.parse(od2trips_conf)
+    
+    # Update O input
+    parent = tree.find('input')
+    ET.SubElement(parent, 'od-matrix-files').set('value', f'{O_listToStr}')    
+    ET.SubElement(parent, 'taz-files').set('value', f'{TAZ}')    
+        
+    # Update output
+    parent = tree.find('output')
+    output_name = f'{O}_od2_{k}.trip.xml'
+    ET.SubElement(parent, 'output-file').set('value', output_name)    
+    
+    # Update seed number
+    parent = tree.find('random_number')
+    ET.SubElement(parent, 'seed').set('value', f'{k}')    
+    
+    # Write xml
+    cfg_name = f'{O}_trips_{k}.cfg.xml'
+    tree.write(cfg_name)
+    return cfg_name, output_name 
+
+
+def create_O_file(folders, fname, origin_district, destination_distric, end_hour, factor):
+    
+    """
+        Generate O files given the real traffic in csv format and origing/destination districs names as in TAZ file. 
+        An O file is generated each 15 minutes.
+        Args:
+        folder: (path class) .
+        O distric name: origin distric
+        D distric name: Destination distric
+        repetitios: number of repetitions
+    """
+    #create 24 hour files
+    traffic = pd.read_csv(folders.realtraffic)
+     
+    df = pd.DataFrame(traffic)
+    #traffic_24 = traffic_df['Total'].values
+    name = os.path.basename(fname)
+     
+    col = list(df)
+    col = col[1:-1]
+    for hour in tqdm(range(end_hour)):  #hora
+        for minute in col:    # minuto
+            vehicles = df[minute][hour]
+            
+            h = hour
+            m = str(minute)
+            until = int(minute) + 15
+            
+            O_file_name = os.path.join(folders.O,f'{h}_{m}_{name}')
+            O = open(f"{O_file_name}", "w")
+         
+            #print(f'{h}:{m} ->  {vehicles}')
+            #num_vehicles = traffic_24[h] * 1.1 # margin of duarouter checkroutes
+            text_list = ['$OR;D2\n',               # O format
+                     f'{h}.{m} {h}.{until}\n',  # Time 0-48 hours
+                     f'{factor}\n',         # Multiplication factor
+                     f'{origin_district} '     # Origin
+                 	 f'{destination_distric} ',   # Destination
+                     f'{vehicles}']            # NUmber of vehicles x multiplication factor
+            O.writelines(text_list)
+            O.close()
+            
+            
 def process_emissions_file(path_csv,routing):
     # process sumo emissions ouput file for a full day simulation 24 hrs
     df = pd.read_csv(path_csv)
@@ -112,7 +337,7 @@ def merge_detector_lanes(dtor_df, tool, routing):
     s_L5 = dtor_df_L5.size
         
     # la dimension debe ser la misma
-    if s_L0 == s_L2 == s_L3 == s_L4 == s_L5:
+    if s_L0 == s_L1 ==s_L2 == s_L3 == s_L4 == s_L5:
         
         L0_L1 = dtor_df_L0.merge(dtor_df_L1, on=['interval_begin', 'interval_end'], suffixes=['_L0','_L1'])
         L2_L3 = dtor_df_L2.merge(dtor_df_L3, on=['interval_begin', 'interval_end'], suffixes=['_L2','_L3'])
@@ -369,10 +594,7 @@ def SUMO_preprocess(options):
         # parse dataframe
         [parallel_parse_output_files(key, group_df) for key, group_df in tqdm(grouped_df)]
 
-
     # converte dector to csv
-   
-    print(f'\nDetector folder: {os.listdir(options.detector)}')
     singlexml2csv(os.listdir(options.detector)[0], options) 
     
     
