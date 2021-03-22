@@ -1,5 +1,5 @@
 import multiprocessing
-import os
+import os, sys
 import subprocess
 import stg
 import click
@@ -15,6 +15,7 @@ class Config(object):
         self.SUMO_exec = ""
         self.SUMO_templates = ""
         self.SUMO_tool = ""
+        self.tool = ""
         self.cfg = ""
         self.detector = ""
         self.dua = ""
@@ -64,9 +65,24 @@ def cli(config, v):
 @click.option('-o','--output-dir',
               type=click.Path(exists=True, resolve_path=True),
               help="Vehicles' traces output directory (routes,trips,flows).")
-@click.option('-tool',
-              default="od2",
-              help='SUMO demand generation tool [od2, dua, DUAIterate, ma, RandomTrips]')
+@click.option('-ma',
+              default= False, is_flag=True,
+              help='MARouter SUMO tool')
+@click.option('-dua',
+              default= False, is_flag=True,
+              help='DUARouter SUMO tool')
+@click.option('-duai',
+              default= False, is_flag=True,
+              help='DUAIterate SUMO tool')
+@click.option('-rt',
+              default= False, is_flag=True,
+              help='RandomTrips SUMO tool')
+@click.option('-od2',
+              default= False, is_flag=True,
+              help='OD2Trips SUMO tool')
+@click.option('-gui',
+              default= False, is_flag=True,
+              help='Graffical interface for SUMO simulations')
 @click.option('-p', '--max-processes',
               default=1,
               help='The maximum number of parallel simulations. [ default available cpus are used ]')
@@ -81,11 +97,24 @@ def cli(config, v):
 
     
 @pass_config
-def trafficgenerator(config, real_traffic, o_district_name, d_district_name, sumo_bin, output_dir, cfg_templates, tool, max_processes, sim_time, repetitions):
+def run(config, real_traffic, o_district_name, gui, d_district_name, sumo_bin, output_dir, cfg_templates, ma, dua, duai, rt, od2, max_processes, sim_time, repetitions):
     """
     STG SUMO Traffic generator. Required options -T, -O, -D, -cfg
     """
-    
+    if dua:
+        config.tool='dua' 
+    elif ma:
+        config.tool='ma' 
+    elif duai:
+        config.tool='duai' 
+    elif od2:
+        config.tool='od2' 
+    elif rt:
+        config.tool='rt' 
+    else:
+        sys.exit('No SUMO routing tool selected.')
+        
+        
     if real_traffic is None or o_district_name is None or d_district_name is None or cfg_templates is None:
         click.echo('\n Empty arguments [-T, -O, -D, -cfg]. Use \x1B[3mstg trafficgenerator --help\x1B[23m')
     else :
@@ -97,25 +126,22 @@ def trafficgenerator(config, real_traffic, o_district_name, d_district_name, sum
         config.SUMO_outputs = os.path.join(config.parents_dir, 'outputs')
         if not os.path.lexists(config.SUMO_outputs):os.makedirs(config.SUMO_outputs)
              
-        if tool in ['od2', 'ma','dua']:
-            config.SUMO_tool = os.path.join(config.SUMO_outputs, tool)
-            config.O_district = o_district_name
-            config.D_district = d_district_name
-            config.realtraffic = real_traffic
-            update_paths(config)
-            cpu_processes = get_MAX_PROCESS(config, max_processes)
-            
-            # SUMO Tools
-            k = 0
-            if tool =='od2':stg.od2(config, k, repetitions, sim_time, cpu_processes, 'od2')
-            elif tool =='dua':stg.dua_ma(config, k, repetitions, sim_time, cpu_processes, 'dua')
-            elif tool =='ma':stg.dua_ma(config, k, repetitions, sim_time, cpu_processes, 'ma')
-              
+        
+        config.SUMO_tool = os.path.join(config.SUMO_outputs, config.tool)
+        config.O_district = o_district_name
+        config.D_district = d_district_name
+        config.realtraffic = real_traffic
+        update_paths(config)
+        cpu_processes = get_MAX_PROCESS(config, max_processes)
+        
+        # SUMO Tools
+        k = 0
+        if config.tool =='od2':stg.od2(config, k, repetitions, sim_time, cpu_processes, config.tool, gui)
+        elif config.tool =='dua':stg.dua_ma(config, k, repetitions, sim_time, cpu_processes, config.tool, gui)
+        elif config.tool =='ma':stg.dua_ma(config, k, repetitions, sim_time, cpu_processes, config.tool, gui)
+          
       
-        else:
-            click.echo('\n SUMO tool not supported.')
-
-
+        
 def update_paths(config):
     create_folder(config.SUMO_tool)   
     subfolders = ['trips', 'O', 'dua', 'ma', 'cfg', 'outputs', 'detector', 'xmltocsv', 'parsed', 'reroute']

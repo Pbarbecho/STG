@@ -84,7 +84,7 @@ def od2(config,k,repetitions, end_hour, processors, routing):
 
     """
     # Generate configurtion files
-    gen_route_files(config, k, repetitions, end_hour, routing)
+    gen_route_files(config, k, repetitions, end_hour, routing, gui)
     # Execute OD@Trips simulations
     simulate(config, processors)
     # Outputs preprocess

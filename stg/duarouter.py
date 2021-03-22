@@ -180,7 +180,7 @@ def exec_MArouter(folders,processors):
        sys.exit('No ma.cfg files}')
                                    
 
-def dua_ma(config,k,repetitions, end_hour, processors, routing):
+def dua_ma(config,k,repetitions, end_hour, processors, routing, gui):
     """
     DUARouter / MARouter  funcions
 
@@ -210,9 +210,11 @@ def dua_ma(config,k,repetitions, end_hour, processors, routing):
         # Execute MArouter 
         exec_MArouter(config,processors)
     
-    simulate(config, processors)
+    simulate(config, processors, gui)
     # Outputs preprocess
     SUMO_outputs_process(config)
+    
+ 
 
 
 

@@ -44,14 +44,14 @@ def print_time(process_name):
     
     
 
-def simulate(folders, processors):
+def simulate(folders, processors, gui):
     simulations = os.listdir(folders.cfg)
     if simulations: 
         batch = parallel_batch_size(simulations)
         # Execute simulations
         print('\nExecuting simulations ....')
         with parallel_backend("loky"):
-                Parallel(n_jobs=processors, verbose=0, batch_size=batch)(delayed(exec_sim_cmd)(s, folders) for s in simulations)
+                Parallel(n_jobs=processors, verbose=0, batch_size=batch)(delayed(exec_sim_cmd)(s, folders, gui) for s in simulations)
         clean_memory()
         print(f'\n{len(os.listdir(folders.outputs))} outputs generated: {folders.outputs}')
     else:
@@ -59,10 +59,13 @@ def simulate(folders, processors):
     print_time('End simulations ')
                 
        
-def exec_sim_cmd(cfg_file, folders):
+def exec_sim_cmd(cfg_file, folders, gui):
     #print('\n Simulating ............\n')
     full_path = os.path.join(folders.cfg, cfg_file)
-    cmd = f'sumo -c {full_path}'
+    if gui:
+        cmd = f'sumo-gui -c {full_path}'
+    else:
+        cmd = f'sumo -c {full_path}'
     os.system(cmd)
 
 
