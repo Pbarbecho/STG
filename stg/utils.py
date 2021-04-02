@@ -10,7 +10,7 @@ import psutil
 import shutil
 import numpy as np
 from datetime import datetime
-from joblib import Parallel, delayed, parallel_backend
+#from joblib import Parallel, delayed, parallel_backend
 
 
 # import sumo tool xmltocsv
@@ -41,8 +41,36 @@ def print_time(process_name):
     now = datetime.now()
     current_time = now.strftime("%H:%M:%S")
     print(f"\n{process_name} Time =", current_time)
+
+
+def gen_DUArouter(trips, i, folders):
+    duarouter_conf = os.path.join(folders.parents_dir,'templates','duarouter.cfg.xml') # duaroter.cfg file location
+    net_file = os.path.join(folders.parents_dir, 'templates', 'osm.net.xml')
+    # Open original file
+    tree = ET.parse(duarouter_conf)
     
+    # Update trip input
+    parent = tree.find('input')
+    ET.SubElement(parent, 'net-file').set('value', f'{net_file}') 
+    ET.SubElement(parent, 'route-files').set('value', f'{trips}')    
+     
+    # Update output
+    parent = tree.find('output')
+    curr_name = os.path.basename(trips).split('_')
+    curr_name = curr_name[0] + '_' + curr_name[1]
+    output_name = os.path.join(folders.dua, f'{curr_name}_dua_{i}.rou.xml')
+    ET.SubElement(parent, 'output-file').set('value', output_name)    
     
+    # Update seed number
+    parent = tree.find('random_number')
+    ET.SubElement(parent, 'seed').set('value', f'{i}')    
+    
+    # Write xml
+    original_path = os.path.dirname(trips)
+    cfg_name = os.path.join(original_path, f'{curr_name}_duarouter_{i}.cfg.xml')
+    tree.write(cfg_name) 
+    return cfg_name, output_name
+
 
 def simulate(folders, processors, gui):
     simulations = os.listdir(folders.cfg)
@@ -69,7 +97,7 @@ def exec_sim_cmd(cfg_file, folders, gui):
     os.system(cmd)
 
 
-def gen_sumo_cfg(routing, dua, k, folders, rr_prob):
+def gen_sumo_cfg(routing, routing_file, k, folders, rr_prob):
     """
     Generate the sumo cfg file to execute the simulation
 
@@ -96,23 +124,26 @@ def gen_sumo_cfg(routing, dua, k, folders, rr_prob):
     
     # Create detector file
     detector_dir = os.path.join(folders.parents_dir,'templates','detector.add.xml')
-    detector_cfg(os.path.join(folders.parents_dir,'templates', 'detector.add.xml'),detector_dir, os.path.join(folders.SUMO_tool,'detector', 'detector.xml')) 
-
+    detector_output = os.path.join(folders.SUMO_tool, 'detector.xml')
+    detector_cfg(detector_dir, detector_output, folders) 
 
     # Open original file
     tree = ET.parse(sumo_cfg)
-      
-    
+         
     # Update rou input
     parent = tree.find('input')
     ET.SubElement(parent, 'net-file').set('value', f'{net_file}') 
-    ET.SubElement(parent, 'route-files').set('value', f'{dua}')    
+    ET.SubElement(parent, 'route-files').set('value', f'{routing_file}')    
     
+    edges_add = edges_path(folders)
     
-    if routing =='dua':add_list = [detector_dir, vtype]
-    elif routing =='ma':add_list = [TAZ, detector_dir, vtype]
-    elif routing =='od2':add_list = [TAZ, detector_dir, vtype]
-    
+    if routing =='dua':add_list = [detector_output, vtype, edges_add]
+    elif routing =='ma':add_list = [TAZ, detector_output, vtype, edges_add]
+    elif routing =='od2':add_list = [TAZ, detector_output, vtype, edges_add]
+    elif routing =='duai':add_list = [detector_output, edges_add]
+    elif routing == 'rt':add_list = [detector_output,vtype, edges_add]
+
+
     additionals = ','.join([elem for elem in add_list]) 
     
     # Update detector
@@ -120,13 +151,17 @@ def gen_sumo_cfg(routing, dua, k, folders, rr_prob):
 
     # Routing
     parent = tree.find('routing')
-    ET.SubElement(parent, 'device.rerouting.probability').set('value', f'{rr_prob}')   
+    ET.SubElement(parent, 'device.rerouting.probability').set('value', f'{int(rr_prob)}')   
     ET.SubElement(parent, 'device.rerouting.output').set('value', f'{os.path.join(folders.reroute, "reroute.xml")}')   
       
     # Update outputs
     parent = tree.find('output')
-    curr_name = os.path.basename(dua).split('_')
+    
+    
+    curr_name = os.path.basename(routing_file).split('_')
     curr_name = curr_name[0] + '_' + curr_name[1]
+    
+    if routing =='rt':curr_name = folders.O_district + '_' + folders.D_district
     
     # outputs 
     outputs = ['emission', 'summary', 'tripinfo']
@@ -139,6 +174,24 @@ def gen_sumo_cfg(routing, dua, k, folders, rr_prob):
     tree.write(output_dir)
     return output_dir
 
+
+def edges_path(folders):
+    # Open original edges additiona file
+    tree = ET.parse(os.path.join(folders.parents_dir,'templates', 'edges.add.xml'))
+       
+    edge_file = os.path.join(folders.edges, "edges.xml")
+    
+    # Update edges file
+    root = tree.getroot()
+    
+    for child in root:
+       child.set('file', f'{edge_file}')  
+    
+    # Write xml
+    output_dir = os.path.join(folders.edges, 'edges.add.xml')
+    tree.write(output_dir)
+    return output_dir
+    
 
 def clean_memory():
     #Clean memory cache at the end of simulation execution
@@ -281,14 +334,14 @@ def parallel_batch_size(plist):
     return batch
 
 
-def detector_cfg(detector_template, detector_cfg, output):
+def detector_cfg(detector_template, output, folders):
+    output_detector = os.path.join(folders.SUMO_tool ,'detector','detector.xml')
     # full path 
     tree = ET.parse(detector_template)
     root = tree.getroot()
     for child in root:
-        child.set('file', f'{output}')  
-    
-    tree.write(detector_cfg) 
+        child.set('file', f'{output_detector}')  
+    tree.write(output) 
 
 
 
@@ -512,7 +565,7 @@ def SUMO_preprocess(options):
         df = pd.DataFrame(tuple_values, columns =['Time', 'CO2', 'x', 'y']) 
         return df
         
-              
+           
                 
     def veh_trip_info(df):
         # filter know features

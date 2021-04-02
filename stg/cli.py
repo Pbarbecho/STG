@@ -26,9 +26,13 @@ class Config(object):
         self.xmltocsv = ""
         self.parsed = ""
         self.reroute = ""
+        self.reroute_probability = ""
         self.realtraffic = ""
         self.O_district = ""
         self.D_district = ""
+        self.edges = ""
+        self.net =""
+        self.iterations =""
          
 pass_config = click.make_pass_decorator(Config, ensure=True)
 
@@ -52,9 +56,9 @@ def cli(config, v):
 @click.option('-s', '--sumo-bin',
               type=click.Path(exists=True, resolve_path=True),
               help='SUMO bin directory.')
-@click.option('-cfg', '--cfg-templates',
+@click.option('-net',
               type=click.Path(exists=True, resolve_path=True),
-              help='Templates of SUMO configuration files.')
+              help='Net file converted to SUMO readable file (.net)')
 @click.option('-T', '--real-traffic',
               type=click.Path(exists=True),
               help='Path to real traffic file with .csv format. ')
@@ -62,9 +66,9 @@ def cli(config, v):
               help='Origin district name as in TAZ file.')
 @click.option('-D', '--D-district-name',
               help='Destination district name as in TAZ file.')
-@click.option('-o','--output-dir',
+@click.option('-o','--outputs',
               type=click.Path(exists=True, resolve_path=True),
-              help="Vehicles' traces output directory (routes,trips,flows).")
+              help="Output directory (route traces, statistics).")
 @click.option('-ma',
               default= False, is_flag=True,
               help='MARouter SUMO tool')
@@ -80,6 +84,12 @@ def cli(config, v):
 @click.option('-od2',
               default= False, is_flag=True,
               help='OD2Trips SUMO tool')
+@click.option('-i', '--iterations',
+              default= 1, show_default=True,
+              help='DUAIterate number of iterations')
+@click.option('-reroute',
+              default= False, is_flag=True, show_default=True,
+              help='Enable SUMO reroute capabilities.')
 @click.option('-gui',
               default= False, is_flag=True,
               help='Graffical interface for SUMO simulations')
@@ -87,8 +97,7 @@ def cli(config, v):
               default=1,
               help='The maximum number of parallel simulations. [ default available cpus are used ]')
 @click.option('--sim-time', '-t',
-              default=1,
-              show_default=True,
+              default=1, show_default=True,
               help='Number of hours to simulate  (e.g., 24 hours)')
 @click.option('-n', '--repetitions',
               default=1,
@@ -97,9 +106,9 @@ def cli(config, v):
 
     
 @pass_config
-def run(config, real_traffic, o_district_name, gui, d_district_name, sumo_bin, output_dir, cfg_templates, ma, dua, duai, rt, od2, max_processes, sim_time, repetitions):
+def run(config, real_traffic, iterations, o_district_name, gui, d_district_name, sumo_bin, outputs, net, ma, dua, duai, rt, od2, max_processes, sim_time, repetitions, reroute):
     """
-    STG SUMO Traffic generator. Required options -T, -O, -D, -cfg
+    STG SUMO Traffic generator. Required options: tool, -O, -D, 
     """
     if dua:
         config.tool='dua' 
@@ -114,8 +123,10 @@ def run(config, real_traffic, o_district_name, gui, d_district_name, sumo_bin, o
     else:
         sys.exit('No SUMO routing tool selected.')
         
-        
-    if real_traffic is None or o_district_name is None or d_district_name is None or cfg_templates is None:
+    # set path to templates 
+    cfg_templates = os.path.join(config.parents_dir, 'templates')  
+    
+    if real_traffic is None or o_district_name is None or d_district_name is None:
         click.echo('\n Empty arguments [-T, -O, -D, -cfg]. Use \x1B[3mstg trafficgenerator --help\x1B[23m')
     else :
         if config.verbose: click.echo(f'\n SUMO Installation: {sumo_bin} \n SUMO Templates: {cfg_templates}\n\n Setting program paths.... ')
@@ -131,6 +142,9 @@ def run(config, real_traffic, o_district_name, gui, d_district_name, sumo_bin, o
         config.O_district = o_district_name
         config.D_district = d_district_name
         config.realtraffic = real_traffic
+        config.net = net # TO DO look for need file in templates folder
+        config.iterations = iterations
+        config.reroute_probability = reroute
         update_paths(config)
         cpu_processes = get_MAX_PROCESS(config, max_processes)
         
@@ -139,12 +153,14 @@ def run(config, real_traffic, o_district_name, gui, d_district_name, sumo_bin, o
         if config.tool =='od2':stg.od2(config, k, repetitions, sim_time, cpu_processes, config.tool, gui)
         elif config.tool =='dua':stg.dua_ma(config, k, repetitions, sim_time, cpu_processes, config.tool, gui)
         elif config.tool =='ma':stg.dua_ma(config, k, repetitions, sim_time, cpu_processes, config.tool, gui)
+        elif config.tool =='duai':stg.duai(config, k, repetitions, sim_time, cpu_processes, config.tool, gui)
+        elif config.tool =='rt':stg.rt(config, k, repetitions, sim_time, cpu_processes, config.tool, gui)
           
       
         
 def update_paths(config):
     create_folder(config.SUMO_tool)   
-    subfolders = ['trips', 'O', 'dua', 'ma', 'cfg', 'outputs', 'detector', 'xmltocsv', 'parsed', 'reroute']
+    subfolders = ['trips', 'O', 'dua', 'ma', 'cfg', 'outputs', 'detector', 'xmltocsv', 'parsed', 'reroute', 'edges', 'duaiterate']
     for sf in tqdm(subfolders):
         create_folder(os.path.join(config.SUMO_tool, sf)) 
     config.trips = os.path.join(config.SUMO_tool, 'trips')
@@ -157,6 +173,7 @@ def update_paths(config):
     config.xmltocsv = os.path.join(config.SUMO_tool, 'xmltocsv')
     config.parsed = os.path.join(config.SUMO_tool, 'parsed')
     config.reroute = os.path.join(config.SUMO_tool, 'reroute')
+    config.edges = os.path.join(config.SUMO_tool, 'edges')
         
     
        

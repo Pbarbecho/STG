@@ -63,7 +63,7 @@ def exec_marouter_cmd(fname):
     os.system(cmd)   
     
     
-def od2(config,k,repetitions, end_hour, processors, routing):
+def od2(config,k,repetitions, end_hour, processors, routing, gui):
     """
     OD2Trips funcions
 
@@ -84,8 +84,8 @@ def od2(config,k,repetitions, end_hour, processors, routing):
 
     """
     # Generate configurtion files
-    gen_route_files(config, k, repetitions, end_hour, routing, gui)
+    gen_route_files(config, k, repetitions, end_hour, routing)
     # Execute OD@Trips simulations
-    simulate(config, processors)
+    simulate(config, processors, gui)
     # Outputs preprocess
     SUMO_outputs_process(config)

@@ -1,7 +1,7 @@
 import os, sys, glob
 import xml.etree.ElementTree as ET
 from joblib import Parallel, delayed, parallel_backend
-from stg.utils import SUMO_outputs_process, simulate, gen_sumo_cfg, exec_od2trips, gen_od2trips, create_O_file, parallel_batch_size 
+from stg.utils import SUMO_outputs_process, simulate, gen_sumo_cfg, exec_od2trips, gen_od2trips, create_O_file, parallel_batch_size, gen_DUArouter
 
 
 def clean_folder(folder):
@@ -32,7 +32,7 @@ def gen_routes(O, k, O_files, folders, routing):
         SystemExit('Routing name not found')
 
      # Generate sumo cfg
-     return gen_sumo_cfg(routing, output_name, k, folders, 0) # last element reroute probability
+     return gen_sumo_cfg(routing, output_name, k, folders, folders.reroute_probability) # last element reroute probability
      
      
 def gen_route_files(folders, k, repetitions, end_hour, routing):
@@ -97,36 +97,6 @@ def gen_MArouter(O, i, O_files, trips, folders):
     
     # Write xml
     cfg_name = os.path.join(folders.O, f'{curr_name}_marouter_{i}.cfg.xml')
-    tree.write(cfg_name) 
-    return cfg_name, output_name
-
-    
-
-def gen_DUArouter(trips, i, folders):
-    duarouter_conf = os.path.join(folders.parents_dir,'templates','duarouter.cfg.xml') # duaroter.cfg file location
-    net_file = os.path.join(folders.parents_dir, 'templates', 'osm.net.xml')
-    # Open original file
-    tree = ET.parse(duarouter_conf)
-    
-    # Update trip input
-    parent = tree.find('input')
-    ET.SubElement(parent, 'net-file').set('value', f'{net_file}') 
-    ET.SubElement(parent, 'route-files').set('value', f'{trips}')    
-     
-    # Update output
-    parent = tree.find('output')
-    curr_name = os.path.basename(trips).split('_')
-    curr_name = curr_name[0] + '_' + curr_name[1]
-    output_name = os.path.join(folders.dua, f'{curr_name}_dua_{i}.rou.xml')
-    ET.SubElement(parent, 'output-file').set('value', output_name)    
-    
-    # Update seed number
-    parent = tree.find('random_number')
-    ET.SubElement(parent, 'seed').set('value', f'{i}')    
-    
-    # Write xml
-    original_path = os.path.dirname(trips)
-    cfg_name = os.path.join(original_path, f'{curr_name}_duarouter_{i}.cfg.xml')
     tree.write(cfg_name) 
     return cfg_name, output_name
         

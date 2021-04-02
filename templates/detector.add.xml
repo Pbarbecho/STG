@@ -1,8 +1,8 @@
 <additional xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/additional_file.xsd">
-    <e1Detector file="/root/STG/outputs/dua/detector/detector.xml" freq="3600.00" id="L0" lane="238179183#5_0" pos="70.94" />
-    <e1Detector file="/root/STG/outputs/dua/detector/detector.xml" freq="3600.00" id="L1" lane="237517575#8_0" pos="4.50" />
-    <e1Detector file="/root/STG/outputs/dua/detector/detector.xml" freq="3600.00" id="L2" lane="237517575#8_1" pos="4.50" />
-    <e1Detector file="/root/STG/outputs/dua/detector/detector.xml" freq="3600.00" id="L3" lane="449991616#18_0" pos="7.00" />
-    <e1Detector file="/root/STG/outputs/dua/detector/detector.xml" freq="3600.00" id="L4" lane="238179183#5_1" pos="70.98" />
-    <e1Detector file="/root/STG/outputs/dua/detector/detector.xml" freq="3600.00" id="L5" lane="238179183#5_2" pos="71.41" />
+    <e1Detector file="/root/STG/outputs/duai/detector/detector.xml" freq="3600.00" id="L0" lane="238179183#5_0" pos="70.94" />
+    <e1Detector file="/root/STG/outputs/duai/detector/detector.xml" freq="3600.00" id="L1" lane="237517575#8_0" pos="4.50" />
+    <e1Detector file="/root/STG/outputs/duai/detector/detector.xml" freq="3600.00" id="L2" lane="237517575#8_1" pos="4.50" />
+    <e1Detector file="/root/STG/outputs/duai/detector/detector.xml" freq="3600.00" id="L3" lane="449991616#18_0" pos="7.00" />
+    <e1Detector file="/root/STG/outputs/duai/detector/detector.xml" freq="3600.00" id="L4" lane="238179183#5_1" pos="70.98" />
+    <e1Detector file="/root/STG/outputs/duai/detector/detector.xml" freq="3600.00" id="L5" lane="238179183#5_2" pos="71.41" />
 </additional>
