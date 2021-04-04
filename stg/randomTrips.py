@@ -263,7 +263,7 @@ def rt(config,k,repetitions, end_hour, processors, routing, gui):
     trips = ','.join([f'{os.path.join(config.trips, elem)}' for elem in read_trips]) 
     
     # generate sumo cfg file
-    gen_sumo_cfg(routing, trips, k, config, 0)
+    gen_sumo_cfg(routing, trips, k, config, config.reroute_probability)
     # execute simulations
     simulate(config, processors, gui)
     

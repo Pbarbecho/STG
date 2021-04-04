@@ -20,7 +20,7 @@ def gen_routes(O, k, O_files, folders, routing):
         output_name = exec_od2trips(cfg_name, output_name, folders)
         
         # Generate sumo cfg
-        return gen_sumo_cfg(routing, output_name, k, folders, 0) # last element reroute probability
+        return gen_sumo_cfg(routing, output_name, k, folders, folders.reroute_probability) # last element reroute probability
         
     else:
         SystemExit('Routing name not found')

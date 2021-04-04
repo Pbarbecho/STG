@@ -22,8 +22,11 @@ def gen_routes(O, k, O_files, folders, routing):
     output_name = exec_od2trips(cfg_name, output_name, folders)
     
     # Custom route via='edges'
-    via_trip = custom_routes(output_name, k, folders)
-   
+    
+    
+    #via_trip = custom_routes(output_name, k, folders)
+    via_trip = output_name
+    
     if routing == 'duai':
         #Generate DUArouter cfg
         cfg_name, output_name = gen_DUArouter(via_trip, k, folders)
@@ -111,14 +114,19 @@ def exec_DUAIterate(folders, via_trips, processors,end_hour, k):
     net_update = 600 #netwrok update (i.e., verify netwrok status) each 600s
     edges = os.path.join(folders.edges, 'edges.add.xml')
     # duaiterate command 
-    cmd = f'python {sumo_tool} --router-verbose --time-to-teleport 84600 \
-                               --time-to-teleport.highways 84600 \
+    cmd = f'python {sumo_tool} --router-verbose --time-to-teleport 200 \
+                               --time-to-teleport.highways 200 \
                                -+ {vtype},{detector_file},{edges} \
                                -a {net_update} \
                                -n {net_file} \
                                -t {via_trips} \
                                -l {iterations} \
                                sumo--device.rerouting.probability {rr_prob} \
+                               sumo--device.rerouting.period 30 \
+                               sumo--device.rerouting.pre-period 30 \
+                               sumo--device.rerouting.adaptation-interval 1 \
+                               sumo--device.rerouting.with-taz true \
+                               sumo--device.rerouting.threads 20 \
                                sumo--device.rerouting.output {reroute_path}'
    
     os.chdir(os.path.join(folders.SUMO_tool, 'duaiterate'))  # Create detector file

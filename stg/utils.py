@@ -179,7 +179,7 @@ def edges_path(folders):
     # Open original edges additiona file
     tree = ET.parse(os.path.join(folders.parents_dir,'templates', 'edges.add.xml'))
        
-    edge_file = os.path.join(folders.edges, "edges.xml")
+    edge_file = os.path.join(folders.edges, "%s_edges.xml")
     
     # Update edges file
     root = tree.getroot()
