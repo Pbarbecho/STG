@@ -4,10 +4,10 @@
 
 # Automating SUMO traffic demand generation [STG] #
 
-STG allows to SUMO users to quickly and easily execute generate traffic demnd for their own sceanrios (i.e., net file) 
+STG allows to SUMO users to quickly and easily execute generate traffic demnd for their own sceanrios (i.e., net file). 
 This is an automation tool for SUMO that generate required confgiration files for SUMO tools. 
 Based on SUMO templates structure, this tool reads templates folder and generate configration files  and execute simulations.
-Required inputs includes: SUMO valid installation, .ned (road network), real traffic (.csv), origin/destination zones (TAZs)
+Required inputs include: SUMO valid installation, .ned (road network), real traffic (.csv), origin/destination zones (TAZs).
  
 How to cite us 
 --------------
