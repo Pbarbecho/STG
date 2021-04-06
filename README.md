@@ -2,67 +2,83 @@
   <img src="doc/logo.png" width="400">
 </p>
 
-# Automating OMNeT++ simulations #
+# Automating SUMO traffic demand generation [STG] #
 
-OSM allows to OMNeT++ users to quickly and easily execute large-scale network simulations. 
-This is an automation tool for OMNeT++ large-scale simulations and data analysis.
-Based on OMNeT++ structure, this tool reads .ini file and build simulation campaign.
-Users' manual an code documentation is available at [readthedocs][rtd].
+STG allows to SUMO users to quickly and easily execute generate traffic demnd for their own sceanrios (i.e., net file) 
+This is an automation tool for SUMO that generate required confgiration files for SUMO tools. 
+Based on SUMO templates structure, this tool reads templates folder and generate configration files  and execute simulations.
+Required inputs includes: SUMO valid installation, .ned (road network), real traffic (.csv), origin/destination zones (TAZs)
  
 How to cite us 
 --------------
 
-If you use SMO for your OMNeT++ experiment analysis, we would appreciate a citation of our work:
+If you use STG for your experiment analysis, we would appreciate a citation of our work:
 
-* P. Bautista, L. F. Urquiza-Aguiar, L. L. Cárdenas and M. A. Igartua, “Large-Scale Simulations Manager Tool for OMNeT++: Expediting Simulations and Post-Processing Analysis,” in IEEE Access, vol. 8, pp. 159291-159306, 2020, doi: 10.1109/ACCESS.2020.3020745.
+* Pablo Barbecho Bautista, Luis Urquiza-Aguiar, Mónica Aguilar Igartua, "Evaluation of dynamic route planning impact on vehicular communications with SUMO", 23rd ACM International Conference on Modeling, Analysis and Simulation of Wireless and Mobile Systems (MSWIM 2020), DOI:10.1145/3416010.3423233 , Alicante, Spain. 16th - 20th November 2020.
 
 
 Feature highlights 
 ------------------
 
 * Supports Python >= 3.5;
-* Fine grane control of the simulation campaign;
+* Fine grane control of the SUMO traffic generation tools;
 * Customizable/interactive plotting
-* Runs parallelized simulations and post-processing for large number of files (common in large-scale simulations);
+* Runs parallelized simulations;
 
 
 
-OSM includes the following tool:    
+STG includes the following tool:    
 ```bash
-  - Launcher: build simulation campaign and execute parallel simulations in batches.
-  - Parser:   Automatically try to detect output results files from simulation campaign (.vec,.sca, custom format) and convert those to an unique output file. 
-  - Analyzer: Reads parsed files and plot results from template or launch an interactive plot in a web browser (pyvot tables). 
+  - run: Generates traffic demand based on the selected SUMO tool. Executes simulations.
 ```
 
 ```bash
-  # Build and lauch the simulation campaign
-  $osm launcher [OPTIONS] INIFILE MAKEFILE
-
-  # Summarize result files located in output folder
-  $osm summarizer [OPTIONS] 
-
-  # Analyze summarized file 
-  $osm analyzer [OPTIONS] 
+    # stg run --help
+    Usage: stg run [OPTIONS]
+    
+      STG SUMO Traffic generator. Required options: tool, -O, -D,
+    
+    Options:
+      -s, --sumo-bin PATH          SUMO bin directory.
+      -net PATH                    Net file converted to SUMO readable file (.net)
+      -T, --real-traffic PATH      Path to real traffic file with .csv format.
+      -O, --O-district-name TEXT   Origin district name as in TAZ file.
+      -D, --D-district-name TEXT   Destination district name as in TAZ file.
+      -o, --outputs PATH           Output directory (route traces, statistics).
+      -ma                          MARouter SUMO tool
+      -dua                         DUARouter SUMO tool
+      -duai                        DUAIterate SUMO tool
+      -rt                          RandomTrips SUMO tool
+      -od2                         OD2Trips SUMO tool
+      -i, --iterations INTEGER     DUAIterate number of iterations  [default: 1]
+      -reroute                     Enable SUMO reroute capabilities.  [default:
+                                   False]
+    
+      -gui                         Graffical interface for SUMO simulations
+      -p, --max-processes INTEGER  The maximum number of parallel simulations. [
+                                   default available cpus are used ]
+    
+      -t, --sim-time INTEGER       Number of hours to simulate  (e.g., 24 hours)
+                                   [default: 1]
+    
+      -n, --repetitions INTEGER    Number of repetitions.  [default: 1]
+      --help                       Show this message and exit. 
 ```
-
-[![Documentation Status](https://readthedocs.org/projects/osm/badge/?version=latest)](https://osm.readthedocs.io/en/latest/?badge=latest)
-[![codecov](https://codecov.io/gh/Pbarbecho/osm/branch/master/graph/badge.svg)](https://codecov.io/gh/Pbarbecho/osm)
-
 
 ## Clone the repository ##
-The osm package is developed using a pipenv. TO install osm on a virtual environment:
+The STG package is developed using a pipenv. TO install osm on a virtual environment:
 ```bash
 pip3 install pipenv
 ```
 
 To clone the osm repository, on the command line, enter:
 ```bash
-git clone https://github.com/Pbarbecho/osm.git
+git clone https://github.com/Pbarbecho/STG.git
 ```
 On the new venv, install osm project in an editable mode:
 
 ```bash
-pipenv install -e osm/
+pipenv install -e stg/
 ```
 
 Then, for use the new virtual environment instantiate a sub-shell as follows:
@@ -71,7 +87,7 @@ Then, for use the new virtual environment instantiate a sub-shell as follows:
 pipenv shell
 ```
 
-At this time, you can interact with the osm modules, customize you analysis and use osm utilities. 
+At this time, you can interact with the STG modules.
 
 ## Downloading modules ##
 
@@ -86,11 +102,9 @@ Depending on the operating system, you may need to add ~/.local/bin to your path
 In case you want to uninstall osm package: 
 
 ```bash
-pip3 uninstall osm
+pip3 uninstall stg
 ```
 
 ## Authors ##
 
 Pablo Barbecho
-
-[rtd]: https://osm.readthedocs.io/en/latest/
