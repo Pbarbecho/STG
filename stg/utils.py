@@ -123,9 +123,9 @@ def gen_sumo_cfg(routing, routing_file, k, folders, rr_prob):
     net_file = os.path.join(folders.parents_dir, 'templates', 'osm.net.xml')
     
     # Create detector file
-    detector_dir = os.path.join(folders.parents_dir,'templates','detector.add.xml')
-    detector_output = os.path.join(folders.SUMO_tool, 'detector.xml')
-    detector_cfg(detector_dir, detector_output, folders) 
+    #detector_dir = os.path.join(folders.parents_dir,'templates','detector.add.xml')
+    #detector_output = os.path.join(folders.SUMO_tool, 'detector.xml')
+    #detector_cfg(detector_dir, detector_output, folders)
 
     # Open original file
     tree = ET.parse(sumo_cfg)
@@ -135,13 +135,13 @@ def gen_sumo_cfg(routing, routing_file, k, folders, rr_prob):
     ET.SubElement(parent, 'net-file').set('value', f'{net_file}') 
     ET.SubElement(parent, 'route-files').set('value', f'{routing_file}')    
     
-    edges_add = edges_path(folders)
+    #edges_add = edges_path(folders)
     
-    if routing =='dua':add_list = [detector_output, vtype, edges_add]
-    elif routing =='ma':add_list = [TAZ, detector_output, vtype, edges_add]
-    elif routing =='od2':add_list = [TAZ, detector_output, vtype, edges_add]
-    elif routing =='duai':add_list = [detector_output, edges_add]
-    elif routing == 'rt':add_list = [detector_output,vtype, edges_add]
+    if routing =='dua':add_list = [vtype]
+    elif routing =='ma':add_list = [TAZ, vtype]
+    elif routing =='od2':add_list = [TAZ, vtype]
+    elif routing =='duai':add_list = []
+    elif routing == 'rt':add_list = [vtype]
 
 
     additionals = ','.join([elem for elem in add_list]) 
@@ -152,12 +152,11 @@ def gen_sumo_cfg(routing, routing_file, k, folders, rr_prob):
     # Routing
     parent = tree.find('routing')
     ET.SubElement(parent, 'device.rerouting.probability').set('value', f'{int(rr_prob)}')   
-    ET.SubElement(parent, 'device.rerouting.output').set('value', f'{os.path.join(folders.reroute, "reroute.xml")}')   
+    #ET.SubElement(parent, 'device.rerouting.output').set('value', f'{os.path.join(folders.reroute, "reroute.xml")}')
       
     # Update outputs
     parent = tree.find('output')
-    
-    
+
     curr_name = os.path.basename(routing_file).split('_')
     curr_name = curr_name[0] + '_' + curr_name[1]
     
@@ -185,7 +184,7 @@ def edges_path(folders):
     root = tree.getroot()
     
     for child in root:
-       child.set('file', f'{edge_file}')  
+       child.set('file', f'{edge_file}')
     
     # Write xml
     output_dir = os.path.join(folders.edges, 'edges.add.xml')
@@ -207,9 +206,9 @@ def exec_od2trips(fname, tripfile, folders):
     cmd = f'od2trips -v -c {fname}'
     os.system(cmd)
     # remove fromtotaz
-    output_file = f'{tripfile}.xml'
-    rm_taz = f"sed 's/fromTaz=\"{folders.O_district}\" toTaz=\"{folders.D_district}\"//' {tripfile} > {output_file}"
-    os.system(rm_taz)
+    output_file = f'{tripfile}'
+    #rm_taz = f"sed 's/fromTaz=\"{folders.O_district}\" toTaz=\"{folders.D_district}\"//' {tripfile} > {output_file}"
+    #os.system(rm_taz)
     return output_file
 
 
