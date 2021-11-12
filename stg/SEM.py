@@ -169,11 +169,11 @@ def read_traffic(folders):
     return traffic_df
 
 def ini_paths(folders, factor, repetitions):
-    folders.reroute_probability = '0'
+    folders.reroute_probability = '-1'
     folders.parents_dir = os.path.dirname(os.path.abspath('{}/..'.format(__file__)))
     folders.O_district = ['H_1','H_2','H_3','H_4','H_5','H_6']
-    #folders.O_district = ['H_1','H_5','H_6']
-    #folders.D_district = ['camp','H_5','H_6']
+    #folders.O_district = ['H_1']
+    #folders.D_district = ['camp']
     folders.D_district = ['baix','montsia','terra','ribera','camp','H_5','H_6']
     folders.O = "/root/Desktop/SEM/Torres_del_Ebre/O_files"
     folders.cfg = "/root/Desktop/SEM/Torres_del_Ebre/cfg"
@@ -275,7 +275,7 @@ print_time(1,start,end)
 
 #2. Generate simulation files
 start = timeit.timeit()
-#sumo_cfg_file = generate_simulation_files(folders)
+sumo_cfg_file = generate_simulation_files(folders)
 end = timeit.timeit()
 print_time(2,start,end)
 
