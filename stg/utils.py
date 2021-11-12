@@ -73,18 +73,20 @@ def gen_DUArouter(trips, i, folders):
 
 
 def simulate(folders, processors, gui):
+    clean_memory()
     simulations = os.listdir(folders.cfg)
     if simulations: 
         batch = parallel_batch_size(simulations)
         # Execute simulations
-        print('\nExecuting simulations ....')
-        with parallel_backend("loky"):
+        print(f'\nExecuting {len(simulations)} simulations ....')
+        with parallel_backend("threading"):
                 Parallel(n_jobs=processors, verbose=0, batch_size=batch)(delayed(exec_sim_cmd)(s, folders, gui) for s in simulations)
         clean_memory()
-        print(f'\n{len(os.listdir(folders.outputs))} outputs generated: {folders.outputs}')
+        print(f'\n{len(os.listdir(folders.outputs))} outputs generated x3: {folders.outputs}')
     else:
        sys.exit('No sumo.cfg files}')
-    print_time('End simulations ')
+    print_time('End simulations\n')
+
                 
        
 def exec_sim_cmd(cfg_file, folders, gui):
@@ -163,11 +165,16 @@ def gen_sumo_cfg(routing, routing_file, k, folders, rr_prob):
     if routing =='rt':curr_name = folders.O_district + '_' + folders.D_district
     
     # outputs 
-    outputs = ['emission', 'summary', 'tripinfo']
+    outputs = ['summary', 'tripinfo','fcd']
     for out in outputs:
         ET.SubElement(parent, f'{out}-output').set('value', os.path.join(
-            folders.outputs, f'{curr_name}_{out}_{k}.xml'))    
-     
+            folders.outputs, f'{curr_name}_{out}_{k}.xml'))
+
+    # update end time
+    parent = tree.find('time')
+    end_time = f'{(int(folders.end_hour) + 1 )* 3600}' # add 1 hour because vehicles has to finish route
+    ET.SubElement(parent, 'end').set('value', end_time)
+
     # Write xml
     output_dir = os.path.join(folders.cfg, f'{curr_name}_{routing}_{k}.sumo.cfg')
     tree.write(output_dir)
