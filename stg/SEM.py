@@ -3,11 +3,11 @@ import pandas as pd
 import xml.etree.ElementTree as ET
 import multiprocessing
 import sumolib
-from stg.utils import SUMO_outputs_process, simulate, gen_sumo_cfg, exec_od2trips
-processors = multiprocessing.cpu_count() # due to memory lack -> Catalunya  map = 2GB
+#from stg.utils import SUMO_outputs_process, simulate, gen_sumo_cfg, exec_od2trips
 import timeit
-
-
+from joblib import Parallel, delayed, parallel_backend
+import math
+processors = multiprocessing.cpu_count() # due to memory lack -> Catalunya  map = 2GB
 
 # import sumo tool xmltocsv
 if 'SUMO_HOME' in os.environ:
@@ -15,7 +15,7 @@ if 'SUMO_HOME' in os.environ:
     curr_dir = os.path.dirname(os.path.realpath(__file__))
     sys.path.append(os.path.join(tools))
 else:
-    sys.exit("please declare environment variable 'SUMO_HOME'")
+    sys.exit("Declare environment variable 'SUMO_HOME'")
 
 
 class folders(object):
@@ -101,6 +101,101 @@ def gen_od2trips(O_files, O, folders):
     tree.write(cfg_name)
     return cfg_name, output_name
 
+def exec_od2trips(fname, tripfile):
+    print('\n OD2Trips running .............\n')
+    cmd = f'od2trips -v -c {fname}'
+    os.system(cmd)
+    # remove fromtotaz
+    output_file = f'{tripfile}'
+    #rm_taz = f"sed 's/fromTaz=\"{folders.O_district}\" toTaz=\"{folders.D_district}\"//' {tripfile} > {output_file}"
+    #os.system(rm_taz)
+    return output_file
+
+
+def gen_sumo_cfg(routing, routing_file, k, folders, rr_prob):
+    """
+    Generate the sumo cfg file to execute the simulation
+
+    Parameters
+    ----------
+    routing : TYPE
+        DESCRIPTION.
+    dua : TYPE
+        DESCRIPTION.
+    k : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    output_dir : TYPE
+        DESCRIPTION.
+
+    """
+    sumo_cfg = os.path.join(folders.parents_dir, 'templates', 'osm.sumo.cfg')
+    vtype = os.path.join(folders.parents_dir, 'templates', 'vtype.xml')
+    # new_emissions = os.path.join(folders.parents_dir,'templates', 'emissions.add.xml')
+    TAZ = os.path.join(folders.parents_dir, 'templates', 'TAZ.xml')
+    net_file = os.path.join(folders.parents_dir, 'templates', 'osm.net.xml')
+
+    # Create detector file
+    # detector_dir = os.path.join(folders.parents_dir,'templates','detector.add.xml')
+    # detector_output = os.path.join(folders.SUMO_tool, 'detector.xml')
+    # detector_cfg(detector_dir, detector_output, folders)
+
+    # Open original file
+    tree = ET.parse(sumo_cfg)
+
+    # Update rou input
+    parent = tree.find('input')
+    ET.SubElement(parent, 'net-file').set('value', f'{net_file}')
+    ET.SubElement(parent, 'route-files').set('value', f'{routing_file}')
+
+    # edges_add = edges_path(folders)
+
+    if routing == 'dua':
+        add_list = [vtype]
+    elif routing == 'ma':
+        add_list = [TAZ, vtype]
+    elif routing == 'od2':
+        add_list = [TAZ, vtype]
+    elif routing == 'duai':
+        add_list = []
+    elif routing == 'rt':
+        add_list = [vtype]
+
+    additionals = ','.join([elem for elem in add_list])
+
+    # Update detector
+    ET.SubElement(parent, 'additional-files').set('value', f'{additionals}')
+
+    # Routing
+    parent = tree.find('routing')
+    ET.SubElement(parent, 'device.rerouting.probability').set('value', f'{int(rr_prob)}')
+    # ET.SubElement(parent, 'device.rerouting.output').set('value', f'{os.path.join(folders.reroute, "reroute.xml")}')
+
+    # Update outputs
+    parent = tree.find('output')
+
+    curr_name = os.path.basename(routing_file).split('_')
+    curr_name = curr_name[0] + '_' + curr_name[1]
+
+    if routing == 'rt': curr_name = folders.O_district + '_' + folders.D_district
+
+    # outputs
+    outputs = ['summary', 'tripinfo', 'fcd']
+    for out in outputs:
+        ET.SubElement(parent, f'{out}-output').set('value', os.path.join(
+            folders.outputs, f'{curr_name}_{out}_{k}.xml'))
+
+    # update end time
+    parent = tree.find('time')
+    end_time = f'{(int(folders.end_hour) + 1) * 3600}'  # add 1 hour because vehicles has to finish route
+    ET.SubElement(parent, 'end').set('value', end_time)
+
+    # Write xml
+    output_dir = os.path.join(folders.cfg, f'{curr_name}_{routing}_{k}.sumo.cfg')
+    tree.write(output_dir)
+    return output_dir
 
 
 def gen_routes(O, O_files_list, folders, routing):
@@ -111,7 +206,7 @@ def gen_routes(O, O_files_list, folders, routing):
         # Generate od2trips cfg
         cfg_name, output_name = gen_od2trips(O_files_list, O, folders)
         # Execute od2trips
-        output_name = exec_od2trips(cfg_name, output_name, folders)
+        output_name = exec_od2trips(cfg_name, output_name)
         # Generate sumo cfg
         return gen_sumo_cfg(routing, output_name, 'r', folders, folders.reroute_probability)  # last element reroute probability
     else:
@@ -171,10 +266,10 @@ def read_traffic(folders):
 def ini_paths(folders, factor, repetitions):
     folders.reroute_probability = '-1'
     folders.parents_dir = os.path.dirname(os.path.abspath('{}/..'.format(__file__)))
-    folders.O_district = ['H_1','H_2','H_3','H_4','H_5','H_6']
-    #folders.O_district = ['H_1']
-    #folders.D_district = ['camp']
-    folders.D_district = ['baix','montsia','terra','ribera','camp','H_5','H_6']
+    #folders.O_district = ['H_1','H_2','H_3','H_4','H_5','H_6']
+    folders.O_district = ['H_1']
+    folders.D_district = ['camp']
+    #folders.D_district = ['baix','montsia','terra','ribera','camp','H_5','H_6']
     folders.O = "/root/Desktop/SEM/Torres_del_Ebre/O_files"
     folders.cfg = "/root/Desktop/SEM/Torres_del_Ebre/cfg"
     folders.outputs = "/media/newdisk/SEM/outputs"
@@ -226,6 +321,46 @@ def xml_to_csv(folders):
    dic_csv = sort_csv_files(folders)
    return dic_csv
 
+
+def clean_memory():
+    # Clean memory cache at the end of simulation execution
+    if os.name != 'nt':  # Linux system
+        os.system('sync')
+        os.system('echo 3 > /proc/sys/vm/drop_caches')
+        os.system('swapoff -a && swapon -a')
+    # print("Memory cleaned")
+
+
+def parallel_batch_size(plist):
+    if len(plist) < processors:
+        batch = 1
+    else:
+        batch = int(math.ceil(len(plist)/processors))
+    return batch
+
+def simulate(folders, processors, gui):
+    clean_memory()
+    simulations = os.listdir(folders.cfg)
+    if simulations:
+        batch = parallel_batch_size(simulations)
+        # Execute simulations
+        print(f'\nExecuting {len(simulations)} simulations ....')
+        with parallel_backend("threading"):
+                Parallel(n_jobs=processors, verbose=0, batch_size=batch)(delayed(exec_sim_cmd)(s, folders, gui) for s in simulations)
+        clean_memory()
+        print(f'\n{len(os.listdir(folders.outputs))} outputs generated x3: {folders.outputs}')
+    else:
+       sys.exit('No sumo.cfg files}')
+    print_time('End simulations\n')
+
+def exec_sim_cmd(cfg_file, folders, gui):
+    #print('\n Simulating ............\n')
+    full_path = os.path.join(folders.cfg, cfg_file)
+    if gui:
+        cmd = f'sumo-gui -c {full_path}'
+    else:
+        cmd = f'sumo -c {full_path}'
+    os.system(cmd)
 
 def merge_function(trip,fcd, fname):
     print('\nMerging ... ',trip, fcd)
