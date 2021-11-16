@@ -266,10 +266,10 @@ def read_traffic(folders):
 def ini_paths(folders, factor, repetitions):
     folders.reroute_probability = '-1'
     folders.parents_dir = os.path.dirname(os.path.abspath('{}/..'.format(__file__)))
-    #folders.O_district = ['H_1','H_2','H_3','H_4','H_5','H_6']
-    folders.O_district = ['H_1']
-    folders.D_district = ['camp']
-    #folders.D_district = ['baix','montsia','terra','ribera','camp','H_5','H_6']
+    #folders.O_district = ['H_1','H_2','H_4','H_5','H_6']
+    folders.O_district = ['H_3']
+    #folders.D_district = ['camp']
+    folders.D_district = ['baix','montsia','terra','ribera','camp','H_5','H_6']
     folders.O = "/root/Desktop/SEM/Torres_del_Ebre/O_files"
     folders.cfg = "/root/Desktop/SEM/Torres_del_Ebre/cfg"
     folders.outputs = "/media/newdisk/SEM/outputs"
@@ -319,6 +319,7 @@ def xml_to_csv(folders):
         print(f'Convirtiendo {f} to csv ....')
         os.system(cmd)
    dic_csv = sort_csv_files(folders)
+   print(dic_csv)
    return dic_csv
 
 
@@ -351,7 +352,7 @@ def simulate(folders, processors, gui):
         print(f'\n{len(os.listdir(folders.outputs))} outputs generated x3: {folders.outputs}')
     else:
        sys.exit('No sumo.cfg files}')
-    print_time('End simulations\n')
+
 
 def exec_sim_cmd(cfg_file, folders, gui):
     #print('\n Simulating ............\n')
@@ -388,6 +389,8 @@ def merge_outputs(folders, csv_dic):
     for e in range(1,len(csv_dic)+1):
         trip_file = ''
         fcd_file = ''
+        #if e != 3:
+            #print(e)
         for ename in csv_dic[f'{e}']:
             if 'tripinfo' in ename.split('_'):
                 trip_file = os.path.join(folders.xmltocsv,ename)
@@ -400,7 +403,6 @@ def print_time(n,begin,end):
     print('**'*20)
     print(f'Step {n}:','B:',begin,'E:',end )
     print('**'*20)
-
 
 # Initialize paths
 start = timeit.timeit()
@@ -423,6 +425,7 @@ print_time(3,start,end)
 #4. Merge outputs
 start = timeit.timeit()
 csv_dic = xml_to_csv(folders)
+#csv_dic={'1': ['H_1_fcd_r.csv', 'H_1_tripinfo_r.csv'], '2': ['H_2_tripinfo_r.csv', 'H_2_fcd_r.csv'], '4': ['H_4_tripinfo_r.csv', 'H_4_fcd_r.csv'], '5': ['H_5_fcd_r.csv', 'H_5_tripinfo_r.csv'], '6': ['H_6_fcd_r.csv', 'H_6_tripinfo_r.csv']}
 merge_outputs(folders, csv_dic)
 end = timeit.timeit()
 print_time(4,start,end)
