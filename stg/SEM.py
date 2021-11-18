@@ -210,22 +210,26 @@ def create_O_file(traffic_df, folders, fname, origin):
         direct_destination = ['H_5','H_6'] # no tiene que generar para tpdps los taz sino entre ellos
 
         Save_O_file = False
+        num_vehicles = 0
         for destination in folders.D_district:
             if destination not in direct_destination and origin not in direct_destination:
                 O_tail_list.append(f'  {origin}    {destination}   {traffic_df.loc[hour, destination]}.00\n')
+                num_vehicles = num_vehicles + traffic_df.loc[hour, destination]
                 Save_O_file = True
             elif origin == 'H_5' and destination== 'H_6':
                 O_tail_list.append(f'  {origin}    {destination}   {traffic_df.loc[hour, "H5_To_H6"]}.00\n')
                 Save_O_file = True
+                num_vehicles = num_vehicles + traffic_df.loc[hour, "H5_To_H6"]
             elif origin == 'H_6' and destination == 'H_5':
                 O_tail_list.append(f'  {origin}    {destination}   {traffic_df.loc[hour, "H6_To_H5"]}.00\n')
                 Save_O_file = True
-
+                num_vehicles = num_vehicles + traffic_df.loc[hour, "H6_To_H5"]
+        print(origin, num_vehicles)
         if Save_O_file: # save only filtered files
             [O_text.append(e) for e in O_tail_list]
             O_files_saved.append(write_O_file(O_text,hour,os.path.basename(fname)))
 
-    return O_files_saved
+    return O_files_saved, num_vehicles
 
 
 def write_O_file(text,hour,name):
@@ -246,14 +250,21 @@ def ini_paths(folders, factor, repetitions):
     folders.parents_dir = os.path.dirname(os.path.abspath('{}/..'.format(__file__)))
     #folders.O_district = ['H_1','H_2','H_4','H_5','H_6']
     folders.O_district = ['H_3']
-    folders.D_district = ['montsia']
+    folders.D_district = ['montsia', 'baix']
     #folders.D_district = ['baix','montsia','terra','ribera','camp','H_5','H_6']
+
     folders.O = "/root/Desktop/SEM/Torres_del_Ebre/O_files"
     folders.cfg = "/root/Desktop/SEM/Torres_del_Ebre/cfg"
-    folders.outputs = "/media/newdisk/SEM/outputs"
     folders.realtraffic = "/root/Desktop/SEM/Torres_del_Ebre/traffic.csv"
-    folders.xmltocsv = "/media/newdisk/SEM/xmltocsv"
     folders.dua = "/root/Desktop/SEM/Torres_del_Ebre/dua"
+
+    if processors<30:
+        folders.outputs = "/media/newdisk/SEM/outputs"
+        folders.xmltocsv = "/media/newdisk/SEM/xmltocsv"
+    else:
+        folders.outputs = "/root/Outputs/outputs"
+        folders.xmltocsv = "/root/Outputs/xmltocsv"
+
     folders.factor = "{}".format(factor)
     folders.repetitions = repetitions
 
@@ -359,7 +370,10 @@ def merge_function(trip,fcd, fname):
         temp_df = temp_df[(temp_df['timestep_time']== min(temp_df['timestep_time'])) | (temp_df['timestep_time']==max(temp_df['timestep_time']))]
         data_list.append(temp_df)
     new_df = pd.concat(data_list)
-    new_df.to_csv(f'/media/newdisk/SEM/results/{fname}.csv')
+    if processors < 30:
+        new_df.to_csv(f'/media/newdisk/SEM/results/{fname}.csv')
+    else:
+        new_df.to_csv(f'/root/Outputs/results/{fname}.csv')
 
 
 
@@ -385,10 +399,10 @@ def print_time(n,begin,end):
 def gen_route_files(traffic_df, folders):
     for h in folders.O_district:
         O_name = os.path.join(folders.O, f'{h}')
-        O_files_list = create_O_file(traffic_df, folders, O_name, h)
+        O_files_list, num_vehicles = create_O_file(traffic_df, folders, O_name, h)
         # Generate cfg files
         cfg_file_loc = gen_routes(O_name, O_files_list, folders, 'od2')
-    return cfg_file_loc
+    return cfg_file_loc, num_vehicles
 
 
 def gen_routes(O, O_files_list, folders, routing):
@@ -422,7 +436,7 @@ def gen_DUArouter(trips, folders):
     parent = tree.find('input')
     ET.SubElement(parent, 'net-file').set('value', f'{net_file}')
     ET.SubElement(parent, 'route-files').set('value', f'{trips}')
-    ET.SubElement(parent, 'additional-files').set('value', f'{add_file}')
+    #ET.SubElement(parent, 'additional-files').set('value', f'{add_file}')
 
     # Update output
     parent = tree.find('output')
@@ -475,6 +489,23 @@ def exec_duarouter_cmd(fname):
     os.system(cmd)
 
 
+def count_routes(folders, num_vehicles):
+    output_files = os.listdir(folders.dua)
+    measure = ['id', 'fromTaz', 'toTaz']
+    out_list = []
+    for f in output_files:
+        if 'alt' not in f.split('.'):
+            summary_list = sumolib.output.parse_sax__asList(os.path.join(folders.dua, f), "vehicle", measure)
+            temp_df =  pd.DataFrame(summary_list).groupby(['fromTaz', 'toTaz']).count().reset_index()
+            temp_df['HourNumVeh'] = num_vehicles
+            out_list.append(temp_df.to_numpy()[0])
+    summary = pd.DataFrame(out_list, columns=['O', 'D', 'Routes','NumVeh']).sort_values(
+                by=['O', 'D'])
+    save_to = os.path.join('/media/newdisk/SEM/results/','count.csv')
+    summary.to_csv(save_to, index=False, header=True)
+
+
+
 # Initialize paths
 start = timeit.timeit()
 ini_paths(folders,1,1) #folders, factor, repetitions  ## horu updates at traffic roww entry
@@ -482,12 +513,14 @@ print_time(1,start,timeit.timeit())
 
 #2. Generate simulation files
 start = timeit.timeit()
-sumo_cfg_file = generate_simulation_files(folders)
+sumo_cfg_file, num_vehicles = generate_simulation_files(folders)
 print_time(2,start,timeit.timeit())
 
 #3. Execute simulations OD2Trips
 start = timeit.timeit()
 exec_DUArouter(folders, processors)
+#num_vehicles = 0
+count_routes(folders, num_vehicles)
 #simulate(folders, processors, 0) #gui
 print_time(3,start,timeit.timeit())
 
