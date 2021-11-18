@@ -252,7 +252,7 @@ def ini_paths(folders, factor, repetitions):
     folders.parents_dir = os.path.dirname(os.path.abspath('{}/..'.format(__file__)))
     #folders.O_district = ['H_1','H_2','H_4','H_5','H_6']
     folders.O_district = ['H_3', 'H_2']
-    folders.D_district = ['montsia', 'baix']
+    folders.D_district = ['priorat']
     #folders.D_district = ['baix','montsia','terra','ribera','camp', 'priorat','H_5','H_6']
 
     folders.O = "/root/Desktop/SEM/Torres_del_Ebre/O_files"
