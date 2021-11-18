@@ -206,7 +206,7 @@ def create_O_file(traffic_df, folders, fname, origin):
         # O file header
         O_text = ['$OR;D2\n',  # O format
                   f'{hour}.00 {hour + 1}.00\n',  # Time 0-23 hours
-                  f'1.{folders.factor}\n']  # Multiplication factor
+                  f'4.{folders.factor}\n']  # Multiplication factor
 
         O_tail_list = []
         direct_destination = ['H_5','H_6'] # no tiene que generar para tpdps los taz sino entre ellos
@@ -253,7 +253,7 @@ def ini_paths(folders, factor, repetitions):
     #folders.O_district = ['H_1','H_2','H_4','H_5','H_6']
     folders.O_district = ['H_3', 'H_2']
     folders.D_district = ['montsia', 'baix']
-    #folders.D_district = ['baix','montsia','terra','ribera','camp','H_5','H_6']
+    #folders.D_district = ['baix','montsia','terra','ribera','camp', 'priorat','H_5','H_6']
 
     folders.O = "/root/Desktop/SEM/Torres_del_Ebre/O_files"
     folders.cfg = "/root/Desktop/SEM/Torres_del_Ebre/cfg"
@@ -499,10 +499,11 @@ def count_routes(folders):
             summary_list = sumolib.output.parse_sax__asList(os.path.join(folders.dua, f), "vehicle", measure)
             temp_df =  pd.DataFrame(summary_list).groupby(['fromTaz', 'toTaz']).count().reset_index()
             temp_df['fname'] = f'{f}'
-            out_list.append(temp_df.to_numpy()[0])
+            for e in temp_df.to_numpy():
+                out_list.append(e)
     summary = pd.DataFrame(out_list, columns=['O', 'D', 'Routes','fname']).sort_values(
                 by=['O', 'D'])
-
+    summary.reset_index(drop=True)
     if processors < 30:
         save_to = os.path.join('/media/newdisk/SEM/results/','count.csv')
     else:
@@ -523,9 +524,8 @@ print_time(2,start,timeit.timeit())
 #3. Execute simulations OD2Trips
 start = timeit.timeit()
 exec_DUArouter(folders, processors)
-#num_vehicles = 0
-count_routes(folders, num_vehicles)
-#simulate(folders, processors, 0) #gui
+count_routes(folders)
+simulate(folders, processors, 0) #gui
 print_time(3,start,timeit.timeit())
 
 #4. Merge outputs
