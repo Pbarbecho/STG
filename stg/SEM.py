@@ -196,10 +196,12 @@ def clean_folders_ini(folders):
     clean_folder(folders.cfg)
     clean_folder(folders.outputs)
     clean_folder(folders.xmltocsv)
+    clean_folder(folders.dua)
 
 
 def create_O_file(traffic_df, folders, fname, origin):
     O_files_saved = []
+    num_vehicles = 0
     for hour in range(folders.end_hour):
         # O file header
         O_text = ['$OR;D2\n',  # O format
@@ -210,7 +212,7 @@ def create_O_file(traffic_df, folders, fname, origin):
         direct_destination = ['H_5','H_6'] # no tiene que generar para tpdps los taz sino entre ellos
 
         Save_O_file = False
-        num_vehicles = 0
+
         for destination in folders.D_district:
             if destination not in direct_destination and origin not in direct_destination:
                 O_tail_list.append(f'  {origin}    {destination}   {traffic_df.loc[hour, destination]}.00\n')
@@ -249,7 +251,7 @@ def ini_paths(folders, factor, repetitions):
     folders.reroute_probability = '-1'
     folders.parents_dir = os.path.dirname(os.path.abspath('{}/..'.format(__file__)))
     #folders.O_district = ['H_1','H_2','H_4','H_5','H_6']
-    folders.O_district = ['H_3']
+    folders.O_district = ['H_3', 'H_2']
     folders.D_district = ['montsia', 'baix']
     #folders.D_district = ['baix','montsia','terra','ribera','camp','H_5','H_6']
 
@@ -271,8 +273,7 @@ def ini_paths(folders, factor, repetitions):
 def generate_simulation_files(folders):
     clean_folders_ini(folders)
     traffic_df = read_traffic(folders)
-    sumo_cfg_file = gen_route_files(traffic_df, folders)
-    return sumo_cfg_file
+    return gen_route_files(traffic_df, folders)
 
 def convertXYtoLonLat():
     net = sumolib.net.readNet('/root/STG/templates/osm.net.xml')
@@ -489,7 +490,7 @@ def exec_duarouter_cmd(fname):
     os.system(cmd)
 
 
-def count_routes(folders, num_vehicles):
+def count_routes(folders):
     output_files = os.listdir(folders.dua)
     measure = ['id', 'fromTaz', 'toTaz']
     out_list = []
@@ -497,13 +498,16 @@ def count_routes(folders, num_vehicles):
         if 'alt' not in f.split('.'):
             summary_list = sumolib.output.parse_sax__asList(os.path.join(folders.dua, f), "vehicle", measure)
             temp_df =  pd.DataFrame(summary_list).groupby(['fromTaz', 'toTaz']).count().reset_index()
-            temp_df['HourNumVeh'] = num_vehicles
+            temp_df['fname'] = f'{f}'
             out_list.append(temp_df.to_numpy()[0])
-    summary = pd.DataFrame(out_list, columns=['O', 'D', 'Routes','NumVeh']).sort_values(
+    summary = pd.DataFrame(out_list, columns=['O', 'D', 'Routes','fname']).sort_values(
                 by=['O', 'D'])
-    save_to = os.path.join('/media/newdisk/SEM/results/','count.csv')
-    summary.to_csv(save_to, index=False, header=True)
 
+    if processors < 30:
+        save_to = os.path.join('/media/newdisk/SEM/results/','count.csv')
+    else:
+        save_to = os.path.join('/root/Outputs/results/','count.csv')
+    summary.to_csv(save_to, index=False, header=True)
 
 
 # Initialize paths
