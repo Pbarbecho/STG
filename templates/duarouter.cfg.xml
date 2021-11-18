@@ -13,6 +13,7 @@
         <precision value="2"/>
         <precision.geo value="6"/>
         <!--<human-readable-time value="false"/>-->
+        <write-trips.geo value="true"/>
     </output>
     <processing>
         <unsorted-input value="true"/>
@@ -26,7 +27,7 @@
 	<mapmatch.distance value="1"/>
         <mapmatch.junctions value="false"/>-->
         <bulk-routing value="false"/>
-        <routing-threads value="20"/>
+
         <routing-algorithm value="dijkstra"/>
         <keep-all-routes value="true"/>
         <skip-new-routes value="false"/>
@@ -37,7 +38,7 @@
     </defaults>
     <time>
         <begin value="0"/>
-        <end value="86400"/>
+
     </time>
     <report>
         <verbose value="false"/>

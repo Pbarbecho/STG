@@ -46,20 +46,12 @@ class folders(object):
         self.end_hour = 0
         self.factor = 1
         self.repetitions = 1
+        self.dua = ''
 
 
 def clean_folder(folder):
     files = glob.glob(os.path.join(folder,'*'))
     [os.remove(f) for f in files]
-
-
-def gen_route_files(traffic_df, folders):
-    for h in folders.O_district:
-        O_name = os.path.join(folders.O, f'{h}')
-        O_files_list = create_O_file(traffic_df, folders, O_name, h)
-        # Generate cfg files
-        cfg_file_loc = gen_routes(O_name, O_files_list, folders, 'od2')
-    return cfg_file_loc
 
 
 def gen_od2trips(O_files, O, folders):
@@ -107,6 +99,7 @@ def exec_od2trips(fname, tripfile):
     os.system(cmd)
     # remove fromtotaz
     output_file = f'{tripfile}'
+    #rm_taz = f"sed 's/fromTaz=\"{folders.O_district}\" toTaz=\"{folders.D_district}\"//' {tripfile} > {output_file}"
     #rm_taz = f"sed 's/fromTaz=\"{folders.O_district}\" toTaz=\"{folders.D_district}\"//' {tripfile} > {output_file}"
     #os.system(rm_taz)
     return output_file
@@ -198,21 +191,6 @@ def gen_sumo_cfg(routing, routing_file, k, folders, rr_prob):
     return output_dir
 
 
-def gen_routes(O, O_files_list, folders, routing):
-    """
-    Generate configuration files for od2 trips
-    """
-    if routing == 'od2':
-        # Generate od2trips cfg
-        cfg_name, output_name = gen_od2trips(O_files_list, O, folders)
-        # Execute od2trips
-        output_name = exec_od2trips(cfg_name, output_name)
-        # Generate sumo cfg
-        return gen_sumo_cfg(routing, output_name, 'r', folders, folders.reroute_probability)  # last element reroute probability
-    else:
-        SystemExit('Routing name not found')
-
-
 def clean_folders_ini(folders):
     clean_folder(folders.O)
     clean_folder(folders.cfg)
@@ -268,13 +246,14 @@ def ini_paths(folders, factor, repetitions):
     folders.parents_dir = os.path.dirname(os.path.abspath('{}/..'.format(__file__)))
     #folders.O_district = ['H_1','H_2','H_4','H_5','H_6']
     folders.O_district = ['H_3']
-    #folders.D_district = ['camp']
-    folders.D_district = ['baix','montsia','terra','ribera','camp','H_5','H_6']
+    folders.D_district = ['montsia']
+    #folders.D_district = ['baix','montsia','terra','ribera','camp','H_5','H_6']
     folders.O = "/root/Desktop/SEM/Torres_del_Ebre/O_files"
     folders.cfg = "/root/Desktop/SEM/Torres_del_Ebre/cfg"
     folders.outputs = "/media/newdisk/SEM/outputs"
     folders.realtraffic = "/root/Desktop/SEM/Torres_del_Ebre/traffic.csv"
     folders.xmltocsv = "/media/newdisk/SEM/xmltocsv"
+    folders.dua = "/root/Desktop/SEM/Torres_del_Ebre/dua"
     folders.factor = "{}".format(factor)
     folders.repetitions = repetitions
 
@@ -319,7 +298,6 @@ def xml_to_csv(folders):
         print(f'Convirtiendo {f} to csv ....')
         os.system(cmd)
    dic_csv = sort_csv_files(folders)
-   print(dic_csv)
    return dic_csv
 
 
@@ -389,13 +367,12 @@ def merge_outputs(folders, csv_dic):
     for e in range(1,len(csv_dic)+1):
         trip_file = ''
         fcd_file = ''
-        #if e != 3:
-            #print(e)
         for ename in csv_dic[f'{e}']:
             if 'tripinfo' in ename.split('_'):
                 trip_file = os.path.join(folders.xmltocsv,ename)
             elif 'fcd' in ename.split('_'):
                 fcd_file = os.path.join(folders.xmltocsv, ename)
+        print(trip_file,fcd_file)
         merge_function(trip_file, fcd_file, f'H{e}')
 
 
@@ -404,31 +381,122 @@ def print_time(n,begin,end):
     print(f'Step {n}:','B:',begin,'E:',end )
     print('**'*20)
 
+
+def gen_route_files(traffic_df, folders):
+    for h in folders.O_district:
+        O_name = os.path.join(folders.O, f'{h}')
+        O_files_list = create_O_file(traffic_df, folders, O_name, h)
+        # Generate cfg files
+        cfg_file_loc = gen_routes(O_name, O_files_list, folders, 'od2')
+    return cfg_file_loc
+
+
+def gen_routes(O, O_files_list, folders, routing):
+    """
+    Generate configuration files for od2 trips
+    """
+    if routing == 'od2':
+        # Generate od2trips cfg
+        cfg_name, output_name = gen_od2trips(O_files_list, O, folders)
+        # Execute od2trips
+        output_name = exec_od2trips(cfg_name, output_name)
+        # Generate DUArouter cfg
+        cfg_name, output_name = gen_DUArouter(output_name, folders)
+        # Generate sumo cfg
+        return gen_sumo_cfg(routing, output_name, 'r', folders, folders.reroute_probability)  # last element reroute probability
+    else:
+        SystemExit('Routing name not found')
+
+
+def gen_DUArouter(trips, folders):
+    duarouter_conf = os.path.join(folders.parents_dir, 'templates', 'duarouter.cfg.xml')  # duaroter.cfg file location
+    net_file = os.path.join(folders.parents_dir, 'templates', 'osm.net.xml')
+    #add_file = os.path.join(folders.parents_dir, 'templates', 'TAZ.xml')
+    add_file = os.path.join(folders.parents_dir, 'templates', 'vtype.xml')
+
+
+    # Open original file
+    tree = ET.parse(duarouter_conf)
+
+    # Update trip input
+    parent = tree.find('input')
+    ET.SubElement(parent, 'net-file').set('value', f'{net_file}')
+    ET.SubElement(parent, 'route-files').set('value', f'{trips}')
+    ET.SubElement(parent, 'additional-files').set('value', f'{add_file}')
+
+    # Update output
+    parent = tree.find('output')
+    curr_name = os.path.basename(trips).split('_')
+    curr_name = curr_name[0] + '_' + curr_name[1]
+    output_name = os.path.join(folders.dua, f'{curr_name}_dua_r.rou.xml')
+    ET.SubElement(parent, 'output-file').set('value', output_name)
+
+    # PROCESS
+    parent = tree.find('time')
+    end_time = f'{(int(folders.end_hour) + 1) * 3600}'  # add 1 hour because vehicles has to finish route
+    ET.SubElement(parent, 'end').set('value', end_time)
+
+    # update end time
+    parent = tree.find('processing')
+    ET.SubElement(parent, 'routing-threads').set('value', f'{processors}')
+
+    # Update seed number
+    parent = tree.find('random_number')
+    ET.SubElement(parent, 'seed').set('value', '1')
+
+    # Write xml
+    original_path = os.path.dirname(trips)
+    cfg_name = os.path.join(original_path, f'{curr_name}_duarouter_r.cfg.xml')
+    tree.write(cfg_name)
+    return cfg_name, output_name
+
+
+def exec_DUArouter(folders, processors):
+    cfg_files = os.listdir(folders.O)
+
+    # Get dua.cfg files list
+    dua_cfg_list = []
+    [dua_cfg_list.append(cf) for cf in cfg_files if 'duarouter' in cf.split('_')]
+
+    if dua_cfg_list:
+        batch = parallel_batch_size(dua_cfg_list)
+
+        # Generate dua routes
+        print(f'\nGenerating duaroutes ({len(dua_cfg_list)} files) ...........\n')
+        with parallel_backend("loky"):
+            Parallel(n_jobs=processors, verbose=0, batch_size=batch)(delayed(exec_duarouter_cmd)(
+                os.path.join(folders.O, cfg)) for cfg in dua_cfg_list)
+    else:
+        sys.exit('No dua.cfg files}')
+
+def exec_duarouter_cmd(fname):
+    print('Generating DUArouter.......')
+    cmd = f'duarouter -c {fname}'
+    os.system(cmd)
+
+
 # Initialize paths
 start = timeit.timeit()
 ini_paths(folders,1,1) #folders, factor, repetitions  ## horu updates at traffic roww entry
-end = timeit.timeit()
-print_time(1,start,end)
+print_time(1,start,timeit.timeit())
 
 #2. Generate simulation files
 start = timeit.timeit()
 sumo_cfg_file = generate_simulation_files(folders)
-end = timeit.timeit()
-print_time(2,start,end)
+print_time(2,start,timeit.timeit())
 
 #3. Execute simulations OD2Trips
 start = timeit.timeit()
-simulate(folders, processors, 0) #gui
-end = timeit.timeit()
-print_time(3,start,end)
+exec_DUArouter(folders, processors)
+#simulate(folders, processors, 0) #gui
+print_time(3,start,timeit.timeit())
 
 #4. Merge outputs
 start = timeit.timeit()
-csv_dic = xml_to_csv(folders)
+#csv_dic = xml_to_csv(folders)
 #csv_dic={'1': ['H_1_fcd_r.csv', 'H_1_tripinfo_r.csv'], '2': ['H_2_tripinfo_r.csv', 'H_2_fcd_r.csv'], '4': ['H_4_tripinfo_r.csv', 'H_4_fcd_r.csv'], '5': ['H_5_fcd_r.csv', 'H_5_tripinfo_r.csv'], '6': ['H_6_fcd_r.csv', 'H_6_tripinfo_r.csv']}
-merge_outputs(folders, csv_dic)
-end = timeit.timeit()
-print_time(4,start,end)
+#merge_outputs(folders, csv_dic)
+print_time(4,start,timeit.timeit())
 #5. Filter outputs
 
 # pendiente script para localizar el lane en algun taz
