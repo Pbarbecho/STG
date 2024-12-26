@@ -14,7 +14,7 @@ How to cite us
 
 If you use STG for your experiment analysis, we would appreciate a citation of our work:
 
-* Pablo Barbecho Bautista, Luis Urquiza Aguiar, Mónica Aguilar Igartua, "How does the traffic behavior change by using SUMO traffic generation tools", Computer Communications, Vol. 181, pp. 1-13, January 2022, DOI: 10.1016/j.comcom.2021.09.023.
+* Pablo Barbecho Bautista, Luis Urquiza Aguiar, Mónica Aguilar Igartua, "How does the traffic behavior change by using SUMO traffic generation tools", Computer Communications, Vol. 181, pp. 1-13, January 2022, DOI: [https://example.com)10.1016/j.comcom.2021.09.023](10.1016/j.comcom.2021.09.023).
 
 
 Feature highlights 
