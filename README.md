@@ -14,7 +14,7 @@ How to cite us
 
 If you use STG for your experiment analysis, we would appreciate a citation of our work:
 
-* Pablo Barbecho Bautista, Luis Urquiza-Aguiar, Mónica Aguilar Igartua, "Evaluation of dynamic route planning impact on vehicular communications with SUMO", 23rd ACM International Conference on Modeling, Analysis and Simulation of Wireless and Mobile Systems (MSWIM 2020), DOI:10.1145/3416010.3423233 , Alicante, Spain. 16th - 20th November 2020.
+* Pablo Barbecho Bautista, Luis Urquiza Aguiar, Mónica Aguilar Igartua, "How does the traffic behavior change by using SUMO traffic generation tools", Computer Communications, Vol. 181, pp. 1-13, January 2022, DOI: 10.1016/j.comcom.2021.09.023.
 
 
 Feature highlights 
